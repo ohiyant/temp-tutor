@@ -1,0 +1,133 @@
+// Prisma schema for the Tutoring Scheduling Platform
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SessionMode {
+  online
+  in_person
+}
+
+enum SessionStatus {
+  pending_payment
+  confirmed
+  cancelled
+  rescheduled
+  completed
+}
+
+model Tutor {
+  id                     String   @id @default(cuid())
+  name                   String
+  email                  String   @unique
+  phone                  String?
+  hourlyRateCents        Int
+  onlineAvailable        Boolean  @default(true)
+  inPersonAvailable      Boolean  @default(false)
+  minBookingNoticeHours  Int      @default(24)
+  maxBookingWindowHours  Int      @default(720) // 30 days
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  subjects               TutorSubject[]
+  availabilityBlocks     AvailabilityBlock[]
+  availabilityExceptions AvailabilityException[]
+  sessions               Session[]
+  bookingHolds           BookingHold[]
+}
+
+model Subject {
+  id     String @id @default(cuid())
+  name   String @unique
+
+  tutors   TutorSubject[]
+  sessions Session[]
+}
+
+model TutorSubject {
+  tutorId   String
+  subjectId String
+
+  tutor   Tutor   @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([tutorId, subjectId])
+}
+
+// Recurring weekly availability, e.g. "every Monday 3pm-6pm"
+model AvailabilityBlock {
+  id        String @id @default(cuid())
+  tutorId   String
+  dayOfWeek Int    // 0 = Sunday ... 6 = Saturday
+  startTime String // "15:00" (stored as HH:mm, interpreted in tutor's local tz)
+  endTime   String // "18:00"
+
+  tutor Tutor @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+}
+
+// One-off override: either blocks out a normally-available slot,
+// or opens up an extra slot outside the recurring schedule.
+model AvailabilityException {
+  id          String   @id @default(cuid())
+  tutorId     String
+  date        DateTime // the calendar date this applies to
+  startTime   String
+  endTime     String
+  isAvailable Boolean  // true = extra availability, false = blackout
+
+  tutor Tutor @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id           String        @id @default(cuid())
+  tutorId      String
+  subjectId    String
+
+  studentName  String
+  studentEmail String
+  studentPhone String?
+  description  String        @db.VarChar(1000)
+
+  mode         SessionMode
+  startAt      DateTime
+  endAt        DateTime
+  timezone     String
+  durationMin  Int
+  priceCents   Int
+  status       SessionStatus @default(pending_payment)
+
+  stripePaymentIntentId String?
+  cancellationToken     String  @unique @default(cuid())
+  rescheduleToken       String  @unique @default(cuid())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tutor   Tutor   @relation(fields: [tutorId], references: [id])
+  subject Subject @relation(fields: [subjectId], references: [id])
+
+  @@index([tutorId, startAt, endAt])
+  @@index([studentEmail, startAt, endAt])
+}
+
+// Temporary lock on a slot while a student is in Stripe Checkout,
+// so two people can't pay for the same slot at once.
+model BookingHold {
+  id                     String   @id @default(cuid())
+  tutorId                String
+  startAt                DateTime
+  endAt                  DateTime
+  expiresAt              DateTime
+  stripeCheckoutSessionId String  @unique
+
+  tutor Tutor @relation(fields: [tutorId], references: [id])
+
+  @@index([tutorId, startAt, endAt])
+}
