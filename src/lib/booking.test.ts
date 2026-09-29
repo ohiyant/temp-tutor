@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { checkSessionFits, hasOverlap, type CheckSessionFitsInput } from "./booking";
+import { CONFIG } from "../config";
 
 // Monday 2030-01-07; tutor free Mondays 15:00–19:00.
 const now = new Date("2030-01-01T12:00:00.000Z");
@@ -30,9 +31,10 @@ describe("checkSessionFits", () => {
   });
 
   it("rejects bad durations", () => {
-    expect(checkSessionFits({ ...base, startAt: at("15:00"), durationMin: 20 })).toMatch(/between/);
-    expect(checkSessionFits({ ...base, startAt: at("15:00"), durationMin: 180 })).toMatch(/between/);
-    expect(checkSessionFits({ ...base, startAt: at("15:00"), durationMin: 33 })).toMatch(/steps/);
+    const { MIN_SESSION_LENGTH_MIN: min, MAX_SESSION_LENGTH_MIN: max, SESSION_DURATION_INCREMENT_MIN: step } = CONFIG;
+    expect(checkSessionFits({ ...base, startAt: at("15:00"), durationMin: min - step })).toMatch(/between/);
+    expect(checkSessionFits({ ...base, startAt: at("15:00"), durationMin: max + step })).toMatch(/between/);
+    expect(checkSessionFits({ ...base, startAt: at("15:00"), durationMin: min + 1 })).toMatch(/steps/);
   });
 
   it("rejects overlap with a confirmed session", () => {

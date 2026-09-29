@@ -6,10 +6,10 @@
  */
 export const CONFIG = {
   // Scheduling granularity
-  START_TIME_INCREMENT_MIN: 5,
-  SESSION_DURATION_INCREMENT_MIN: 5,
+  START_TIME_INCREMENT_MIN: 15,
+  SESSION_DURATION_INCREMENT_MIN: 15,
   MIN_SESSION_LENGTH_MIN: 30,
-  MAX_SESSION_LENGTH_MIN: 120,
+  MAX_SESSION_LENGTH_MIN: 180,
   // Length of the session created by a single click (no drag) on the calendar.
   DEFAULT_SESSION_LENGTH_MIN: 60,
 
