@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import TimeZoneSelect from "@/components/TimeZoneSelect";
 
@@ -21,6 +21,7 @@ export default function ProfileManager({
   initialOnlineAvailable,
   initialInPersonAvailable,
   initialTimeZone,
+  extraPanel,
 }: {
   tutorId: string;
   /** Admins can also change the tutor's name and sign-in email. */
@@ -34,6 +35,8 @@ export default function ProfileManager({
   initialOnlineAvailable: boolean;
   initialInPersonAvailable: boolean;
   initialTimeZone: string;
+  /** Another panel to lay out in the same grid (the admin's Remove tutor). */
+  extraPanel?: ReactNode;
 }) {
   const router = useRouter();
   const [name, setName] = useState(initialName);
@@ -104,72 +107,90 @@ export default function ProfileManager({
   }
 
   return (
-    <div className="card">
-      {error && <p className="error-text">{error}</p>}
-      {savedAt && !error && <p style={{ color: "#16a34a", fontSize: "0.9rem" }}>Saved.</p>}
-
-      {isAdmin && (
-        <div className="form-row">
-          <div className="form-field">
-            <label htmlFor="tutor-name">Name</label>
-            <input id="tutor-name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="form-field">
-            <label htmlFor="tutor-email">Sign-in email</label>
-            <input id="tutor-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-        </div>
-      )}
-
-      <div className="form-field" style={{ marginBottom: "1rem" }}>
-        <label>Subjects taught</label>
-        {allSubjects.map((s) => (
-          <div className="checkbox-row" key={s.id}>
+    <div className="panel-page">
+      <div className="panel-grid">
+        <section className="card panel">
+          <h2>Rate & sessions</h2>
+          <div className="form-field" style={{ marginBottom: "0.9rem" }}>
+            <label htmlFor="tutor-rate">Hourly rate ($)</label>
             <input
-              type="checkbox"
-              id={`subject-${s.id}`}
-              checked={subjectIds.has(s.id)}
-              onChange={() => toggleSubject(s.id)}
+              id="tutor-rate"
+              type="number"
+              min={0}
+              step="0.01"
+              value={rateDollars}
+              onChange={(e) => setRateDollars(e.target.value)}
+              style={{ width: "8rem" }}
             />
-            <label htmlFor={`subject-${s.id}`}>{s.name}</label>
           </div>
-        ))}
+          <div className="form-field">
+            <label>Session types</label>
+            <label className="checkbox-row">
+              <input type="checkbox" checked={online} onChange={(e) => setOnline(e.target.checked)} /> Online
+            </label>
+            <label className="checkbox-row">
+              <input type="checkbox" checked={inPerson} onChange={(e) => setInPerson(e.target.checked)} /> In-person
+            </label>
+          </div>
+        </section>
+
+        <section className="card panel">
+          <h2>Subjects</h2>
+          <p className="muted small">Students see you when they pick one of these.</p>
+          <div className="subject-chips">
+            {allSubjects.map((s) => (
+              <label key={s.id} className={`subject-chip${subjectIds.has(s.id) ? " is-on" : ""}`}>
+                <input type="checkbox" checked={subjectIds.has(s.id)} onChange={() => toggleSubject(s.id)} />
+                {s.name}
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <section className="card panel">
+          <h2>Contact & timezone</h2>
+          {isAdmin && (
+            <>
+              <div className="form-field" style={{ marginBottom: "0.6rem" }}>
+                <label htmlFor="tutor-name">Name</label>
+                <input id="tutor-name" value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="form-field" style={{ marginBottom: "0.6rem" }}>
+                <label htmlFor="tutor-email">Sign-in email</label>
+                <input id="tutor-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+            </>
+          )}
+          <div className="form-field" style={{ marginBottom: "0.6rem" }}>
+            <label htmlFor="tutor-phone">Phone</label>
+            <input
+              id="tutor-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="555-0100"
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="tutor-tz">Timezone</label>
+            <TimeZoneSelect id="tutor-tz" value={timeZone} onChange={setTimeZone} />
+          </div>
+          <p className="muted small" style={{ marginBottom: 0 }}>
+            Your hours are in this timezone. Changing it keeps the same clock times (still 4pm–8pm) in the new zone;
+            existing bookings keep their exact time.
+          </p>
+        </section>
+
+        {extraPanel}
       </div>
 
-      <div className="form-field" style={{ marginBottom: "1rem" }}>
-        <label>Availability mode</label>
-        <div className="checkbox-row">
-          <input type="checkbox" id="online" checked={online} onChange={(e) => setOnline(e.target.checked)} />
-          <label htmlFor="online">Online</label>
-        </div>
-        <div className="checkbox-row">
-          <input type="checkbox" id="inPerson" checked={inPerson} onChange={(e) => setInPerson(e.target.checked)} />
-          <label htmlFor="inPerson">In-person</label>
-        </div>
+      <div className="panel-save">
+        <button onClick={save} disabled={saving}>
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+        {error && <span className="error-text">{error}</span>}
+        {savedAt && !error && <span className="success-text">Saved.</span>}
       </div>
-
-      <div className="form-row">
-        <div className="form-field">
-          <label>Hourly rate ($)</label>
-          <input type="number" min={0} step="0.01" value={rateDollars} onChange={(e) => setRateDollars(e.target.value)} />
-        </div>
-        <div className="form-field">
-          <label>Phone</label>
-          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="555-0100" />
-        </div>
-        <div className="form-field">
-          <label htmlFor="tutor-tz">Timezone</label>
-          <TimeZoneSelect id="tutor-tz" value={timeZone} onChange={setTimeZone} />
-        </div>
-      </div>
-      <p className="muted small" style={{ marginTop: "-0.5rem" }}>
-        Weekly hours and one-off times are in this timezone. Changing it keeps the same clock times (e.g. still
-        4pm–8pm) in the new zone; existing bookings keep their exact time.
-      </p>
-
-      <button onClick={save} disabled={saving}>
-        {saving ? "Saving..." : "Save Profile"}
-      </button>
     </div>
   );
 }

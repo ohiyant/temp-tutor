@@ -93,7 +93,7 @@ body {
 .form-row {
   display: flex;
   gap: 0.75rem;
-  align-items: end;
+  align-items: flex-end;
   flex-wrap: wrap;
   margin-bottom: 1rem;
 }
@@ -202,7 +202,7 @@ body:has(.container-wide.calendar-mode) main {
 .filters-bar {
   display: flex;
   gap: 1rem;
-  align-items: end;
+  align-items: flex-end;
   flex-wrap: wrap;
   background: white;
   border: 1px solid #e5e5e5;
@@ -748,139 +748,11 @@ button.secondary {
   max-width: 20rem;
 }
 
-/* --- Tutor workspace (own schedule) --- */
-
-.tutor-workspace {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.tutor-workspace h1 {
-  margin: 0;
-}
-
-.tutor-workspace .back-link {
-  margin: 0;
-}
-
-.workspace-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 0.75rem;
-}
-
-.workspace-card {
-  background: white;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  padding: 0.85rem 1.1rem;
-  font-size: 0.9rem;
-}
-
-.workspace-card p {
-  margin: 0.35rem 0 0;
-}
-
-.workspace-card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
-}
-
-.workspace-card-head h2 {
-  margin: 0;
-  font-size: 0.95rem;
-}
-
-.workspace-card-head a {
-  color: #2563eb;
-  text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.workspace-card-head a:hover {
-  text-decoration: underline;
-}
-
-.tutor-schedule .calendar-nav {
-  margin-bottom: 0.6rem;
-}
-
-.schedule-scroll {
-  max-height: 72vh;
-  flex: none;
-}
-
-.schedule-grid {
-  min-width: 100%;
-}
-
-.calendar-day-col.schedule-day-col {
-  flex: 1 1 0;
-  min-width: 110px;
-}
+/* --- Calendar details panel (tutor and admin calendars) --- */
 
 .calendar-day-header.is-today {
   color: #2563eb;
   box-shadow: inset 0 -2px 0 #2563eb;
-}
-
-.calendar-block.schedule-available {
-  background: #eaf1ff;
-  border-left: 3px solid #93b4f5;
-  border-radius: 3px;
-  color: #3b5da8;
-  font-size: 0.65rem;
-}
-
-.calendar-block.schedule-blocked {
-  background: repeating-linear-gradient(45deg, #eee, #eee 5px, #e0e0e0 5px, #e0e0e0 10px);
-  border-radius: 3px;
-  z-index: 2;
-}
-
-.calendar-block.schedule-session {
-  z-index: 5;
-  background: #2563eb;
-  color: white;
-  text-align: left;
-  font-size: 0.68rem;
-  line-height: 1.25;
-  padding: 3px 6px;
-  border: none;
-  border-radius: 5px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
-}
-
-.calendar-block.schedule-session:hover {
-  background: #1d4ed8;
-}
-
-.calendar-block.schedule-session.is-past {
-  background: #7c93c9;
-}
-
-.calendar-block.schedule-session.is-selected {
-  outline: 2px solid #1a1a1a;
-  outline-offset: 1px;
-}
-
-.legend-swatch.schedule-swatch-available {
-  background: #eaf1ff;
-  border-left: 3px solid #93b4f5;
-}
-
-.legend-swatch.schedule-swatch-booked {
-  background: #2563eb;
-}
-
-.legend-swatch.schedule-swatch-blocked {
-  background: repeating-linear-gradient(45deg, #eee, #eee 3px, #d6d6d6 3px, #d6d6d6 6px);
 }
 
 .session-details {
@@ -1003,7 +875,7 @@ button.secondary {
 }
 
 .reschedule .calendar-nav {
-  align-items: end;
+  align-items: flex-end;
 }
 
 .reschedule-tz {
@@ -1081,58 +953,12 @@ button.secondary {
 
 /* --- Admin area --- */
 
-.admin-area {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.admin-head {
-  display: flex;
-  align-items: flex-end;
-  gap: 2rem;
-  border-bottom: 1px solid #e5e5e5;
-  flex-wrap: wrap;
-}
-
-.admin-head h1 {
-  margin: 0 0 0.55rem;
-}
-
-.admin-tabs {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.admin-tabs a {
-  padding: 0.55rem 1rem;
-  color: #555;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 0.95rem;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-}
-
-.admin-tabs a:hover {
-  color: #1a1a1a;
-}
-
-.admin-tabs a.is-active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
-}
-
 .admin-narrow {
   max-width: 720px;
 }
 
 .admin-tz {
   margin-left: auto;
-}
-
-.admin-schedule .calendar-nav {
-  align-items: end;
 }
 
 .admin-filters {
@@ -1160,10 +986,21 @@ button.secondary {
   text-decoration: line-through;
 }
 
-.admin-show-cancelled {
-  margin: 0 0 0 auto;
+.admin-toggles {
+  display: flex;
+  gap: 1rem;
+  margin-left: auto;
   font-size: 0.82rem;
-  color: #555;
+  color: #444;
+}
+
+.admin-toggles .checkbox-row {
+  margin: 0;
+  gap: 0.3rem;
+}
+
+.admin-toggles .is-disabled {
+  opacity: 0.45;
 }
 
 .calendar-block.admin-session {
@@ -1371,7 +1208,7 @@ button.secondary {
     flex-wrap: wrap;
   }
 
-  .admin-head {
+  .tab-area-head {
     gap: 0.75rem;
   }
 }
@@ -1383,4 +1220,572 @@ button.secondary {
   text-align: center;
   font-size: 0.85rem;
   padding: 0.4rem 1rem;
+}
+
+/* --- Tabbed areas (admin and tutor) --- */
+
+.tab-area {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.tab-area-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 2rem;
+  border-bottom: 1px solid #e5e5e5;
+  flex-wrap: wrap;
+}
+
+.tab-area-head h1 {
+  margin: 0 0 0.55rem;
+}
+
+.tab-area-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.back-link-inline {
+  font-size: 0.82rem;
+  color: #2563eb;
+  text-decoration: none;
+  margin-bottom: 0.15rem;
+}
+
+.page-tabs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.page-tabs a {
+  padding: 0.55rem 1rem;
+  color: #555;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+}
+
+.page-tabs a:hover {
+  color: #1a1a1a;
+}
+
+.page-tabs a.is-active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+/* --- Calendars that fill the screen (tutor schedule, admin bookings) ---
+   Same idea as the booking page: pin the page to the viewport and let the
+   calendar take the height that's left, so nothing scrolls. */
+
+body:has(.fit-calendar) {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+body:has(.fit-calendar) main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+body:has(.fit-calendar) .tab-area {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding-bottom: 0.75rem;
+}
+
+.fit-calendar {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.fit-calendar .calendar-nav {
+  margin-bottom: 0.6rem;
+  align-items: center;
+}
+
+.fit-calendar .calendar-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Day columns stretch to share the width (the booking calendar measures its own). */
+.calendar-grid.fill-grid {
+  min-width: 100%;
+}
+
+.calendar-day-col.fill-day-col {
+  flex: 1 1 0;
+  min-width: 96px;
+}
+
+/* Blocks look the same on every calendar: tinted = available, solid = booked. */
+.calendar-block.available {
+  border-left: 3px solid;
+  border-radius: 3px;
+  color: #334155;
+  font-size: 0.65rem;
+}
+
+.calendar-block.session {
+  z-index: 5;
+  color: white;
+  text-align: left;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.calendar-block.session:hover {
+  filter: brightness(0.92);
+}
+
+.calendar-block.session.is-past {
+  opacity: 0.6;
+}
+
+.calendar-block.session.is-selected {
+  outline: 2px solid #1a1a1a;
+  outline-offset: 1px;
+}
+
+.legend-swatch.legend-hatched {
+  background: repeating-linear-gradient(45deg, #ccc, #ccc 3px, #eee 3px, #eee 6px);
+}
+
+/* Booking details float over the calendar instead of pushing it off screen. */
+.fit-calendar .session-details {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: min(440px, calc(100% - 24px));
+  max-height: calc(100% - 90px);
+  overflow-y: auto;
+  z-index: 80;
+  margin: 0;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18);
+}
+
+/* --- Panel pages (tutor Availability and Rate & subjects) --- */
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.card.panel {
+  margin: 0;
+}
+
+.card.panel h2 {
+  margin-bottom: 0.25rem;
+}
+
+.card.panel > .muted.small {
+  margin-top: 0;
+}
+
+/* Long lists scroll inside their card, so the page itself stays on one screen. */
+.panel-list {
+  max-height: 34vh;
+  overflow-y: auto;
+}
+
+.panel-add {
+  margin: 0.8rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px solid #eee;
+}
+
+.exception-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  margin-left: 0.25rem;
+}
+
+.exception-tag.blocked {
+  background: #f1f1f1;
+  color: #555;
+}
+
+.exception-tag.extra {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.subject-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.subject-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid #d6d6d6;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: white;
+}
+
+.subject-chip.is-on {
+  border-color: #2563eb;
+  background: #eef3ff;
+  color: #1d4ed8;
+}
+
+.subject-chip input {
+  margin: 0;
+}
+
+.panel-save {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.card.panel.danger-zone {
+  margin-top: 0;
+}
+
+@media (max-width: 640px) {
+  /* Phones: let these pages scroll, with the calendar a fixed share of the screen. */
+  body:has(.fit-calendar) {
+    height: auto;
+    display: block;
+    overflow: visible;
+  }
+
+  .fit-calendar .calendar-scroll {
+    flex: none;
+    height: 70vh;
+  }
+
+  .page-tabs a {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.88rem;
+  }
+
+  .panel-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The hidden attribute always wins over display rules like .form-field's. */
+[hidden] {
+  display: none !important;
+}
+
+/* --- Days / Weeks switch --- */
+
+.view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.view-switch .view-btn {
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.35rem 0.8rem;
+}
+
+.view-switch .view-btn.is-active {
+  background: #eef3ff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.weeks-select {
+  padding: 0.3rem 0.4rem;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: white;
+}
+
+/* --- Weeks view (month-style grid) --- */
+
+.month-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  background: white;
+  overflow: hidden;
+  transition: opacity 0.15s;
+}
+
+.month-grid.is-loading {
+  opacity: 0.5;
+}
+
+.month-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.month-day {
+  min-height: 0;
+  min-width: 0;
+  border-right: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 0.25rem 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.month-day:nth-child(7n) {
+  border-right: none;
+}
+
+.month-day:hover {
+  background: #f8faff;
+}
+
+.month-day:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.month-day.is-other-month {
+  background: #fafafa;
+}
+
+.month-day.is-other-month .month-day-num {
+  color: #aaa;
+}
+
+.month-day.is-past .month-chips {
+  opacity: 0.6;
+}
+
+.month-day-num {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #333;
+  align-self: flex-start;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+}
+
+.month-day.is-today .month-day-num {
+  background: #2563eb;
+  color: white;
+}
+
+.month-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+}
+
+.month-chip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  padding: 1px 5px;
+  border: none;
+  border-radius: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: white;
+  cursor: pointer;
+}
+
+.month-chip.tint {
+  color: #334155;
+  border-left: 3px solid;
+  border-radius: 2px;
+}
+
+.month-chip.cancelled {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.month-chip.is-selected {
+  outline: 2px solid #1a1a1a;
+  outline-offset: 1px;
+}
+
+.month-chip.solid:hover,
+.month-chip.cancelled:hover {
+  filter: brightness(0.92);
+}
+
+.month-more {
+  font-size: 0.68rem;
+  color: #555;
+  font-weight: 500;
+  padding-left: 3px;
+}
+
+@media (max-width: 640px) {
+  .month-grid {
+    flex: none;
+    height: 70vh;
+  }
+
+  .month-chip {
+    font-size: 0.6rem;
+    padding: 1px 3px;
+  }
+}
+
+/* Each day column's blocks get their own stacking layer, so however high a
+   block's z-index is within the column, it always scrolls UNDER the sticky
+   day header (and the sticky time axis) instead of over it. */
+.calendar-body {
+  isolation: isolate;
+}
+
+/* --- Session outcomes --- */
+
+.calendar-block.session.status-completed::before,
+.month-chip.status-completed::before {
+  content: "✓ ";
+  font-weight: 700;
+}
+
+.calendar-block.session.status-no_show,
+.month-chip.status-no_show {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.28) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+.calendar-block.session.status-no_show::before,
+.month-chip.status-no_show::before {
+  content: "✗ ";
+  font-weight: 700;
+}
+
+.session-outcome {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.session-outcome-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-right: 0.25rem;
+}
+
+.outcome-btn {
+  background: white;
+  color: #333;
+  border: 1px solid #d6d6d6;
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.outcome-btn:hover:not(:disabled) {
+  background: #f5f5f5;
+}
+
+.outcome-btn.completed.is-on {
+  background: #dcfce7;
+  border-color: #16a34a;
+  color: #166534;
+  font-weight: 600;
+}
+
+.outcome-btn.no-show.is-on {
+  background: #fee2e2;
+  border-color: #dc2626;
+  color: #991b1b;
+  font-weight: 600;
+}
+
+/* --- My bookings --- */
+
+.my-bookings-heading {
+  font-size: 1rem;
+  margin: 1.4rem 0 0.25rem;
+}
+
+.my-booking-row {
+  gap: 1rem;
+}
+
+.my-booking-actions {
+  display: flex;
+  gap: 0.9rem;
+  flex-shrink: 0;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.booking-status-tag {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: #f1f1f1;
+  color: #555;
+}
+
+.booking-status-tag.status-completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.booking-status-tag.status-no_show,
+.booking-status-tag.status-cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.done-my-bookings {
+  align-self: center;
+  color: #2563eb;
+  font-size: 0.9rem;
 }

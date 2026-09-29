@@ -9,9 +9,12 @@
  * elsewhere), since that's the zone their weekly hours are written in.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { CONFIG } from "@/config";
 import CalendarNav from "@/components/CalendarNav";
+import { useFitCalendar } from "@/components/useFitCalendar";
+import CalendarViewSwitch, { type CalendarView } from "@/components/CalendarViewSwitch";
+import MonthGrid, { type MonthItem } from "@/components/MonthGrid";
 import {
   WINDOW_LENGTH_MIN,
   addDays,
@@ -20,10 +23,14 @@ import {
   daySegment,
   fmtLongDate,
   fmtPrice,
+  fmtShortTime,
   fmtTime,
+  hexToRgba,
   hourMarks,
+  initialScrollTop,
   localDate,
   minutesFromWindowStart,
+  startOfWeek,
   todayIn,
   zoneLabel,
 } from "@/lib/calendarUi";
@@ -58,42 +65,47 @@ interface ScheduleResponse {
   sessions: ScheduleSession[];
 }
 
-const PX_PER_MIN = 0.8;
 const HOURS = hourMarks();
 
 export default function TutorSchedule({
   tutorId,
   timeZone,
+  color,
   canCancel,
 }: {
   tutorId: string;
   /** The tutor's timezone. */
   timeZone: string;
+  /** The tutor's calendar color (same as on the booking and admin calendars). */
+  color: string;
   canCancel: boolean;
 }) {
   const today = todayIn(timeZone);
   const [start, setStart] = useState(today);
-  const days = CONFIG.DEFAULT_CALENDAR_DAYS;
+  const [view, setView] = useState<CalendarView>("days");
+  const [weeks, setWeeks] = useState<number>(CONFIG.DEFAULT_CALENDAR_WEEKS);
+  // Days view: a week from `start`. Weeks view: whole weeks from a Sunday.
+  const days = view === "weeks" ? weeks * 7 : CONFIG.DEFAULT_CALENDAR_DAYS;
   const [data, setData] = useState<ScheduleResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const { scrollRef, scrollEl, size, pxPerMin } = useFitCalendar();
 
-  // When a new week loads, scroll to just above its earliest availability
-  // or booking, so an afternoon-only tutor doesn't open on empty mornings.
+  // The grid covers the whole day and scrolls: open a new week just above
+  // its earliest availability or booking (7am if there's nothing).
   const loadedStart = data?.start;
   useEffect(() => {
-    if (!data || !scrollRef.current) return;
+    if (!data || !scrollEl) return;
     const starts = [...data.available.map((r) => r.start), ...data.sessions.map((s) => s.startAt)].map((iso) =>
       minutesFromWindowStart(iso, timeZone)
     );
-    const earliest = starts.length ? Math.min(...starts) : 0;
-    scrollRef.current.scrollTop = Math.max(0, (earliest - 30) * PX_PER_MIN);
-    // Only on a new week, not on a reload after cancelling.
+    scrollEl.scrollTop = initialScrollTop(starts.length ? Math.min(...starts) : null, pxPerMin);
+    // On a new week, and again once the box reaches its final size (styles
+    // can land after the first paint) — not on a reload after cancelling.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadedStart, timeZone]);
+  }, [loadedStart, timeZone, scrollEl, pxPerMin, size.height]);
 
   useEffect(() => {
     let cancelled = false;
@@ -120,53 +132,106 @@ export default function TutorSchedule({
   }, [tutorId, start, days, reloadKey]);
 
   const displayDays = Array.from({ length: days }, (_, i) => addDays(start, i));
-  const gridHeight = WINDOW_LENGTH_MIN * PX_PER_MIN;
+  const gridHeight = WINDOW_LENGTH_MIN * pxPerMin;
   const sessions = data?.sessions ?? [];
   const selected = sessions.find((s) => s.id === selectedId) ?? null;
   const upcomingInView = sessions.filter((s) => new Date(s.endAt).getTime() > Date.now()).length;
+  const toMark = sessions.filter(needsOutcome).length;
+
+  function changeView(next: CalendarView) {
+    setView(next);
+    if (next === "weeks") setStart(startOfWeek(start));
+  }
+
+  function openDay(date: string) {
+    setView("days");
+    setStart(date);
+  }
+
+  const monthItems: MonthItem[] = [
+    ...(data?.available ?? []).map((r, i) => ({
+      id: `a-${i}`,
+      start: r.start,
+      end: r.end,
+      label: `${fmtShortTime(r.start, timeZone)}–${fmtShortTime(r.end, timeZone)}`,
+      title: `Available ${fmtTime(r.start, timeZone)}–${fmtTime(r.end, timeZone)}`,
+      color,
+      variant: "tint" as const,
+    })),
+    ...sessions.map((s) => ({
+      id: s.id,
+      start: s.startAt,
+      end: s.endAt,
+      label: `${fmtShortTime(s.startAt, timeZone)} ${s.studentName}`,
+      title: `${fmtTime(s.startAt, timeZone)}–${fmtTime(s.endAt, timeZone)} · ${s.studentName} · ${
+        s.subjectName
+      }${statusSuffix(s.status)}`,
+      color,
+      variant: "solid" as const,
+      className: `status-${s.status}`,
+      selected: s.id === selectedId,
+      onClick: () => setSelectedId(s.id === selectedId ? null : s.id),
+    })),
+  ];
 
   return (
-    <div className="tutor-schedule">
+    <div className="fit-calendar tutor-schedule">
       <div className="calendar-nav">
-        <CalendarNav start={start} days={days} today={today} onChange={setStart} />
+        <CalendarNav
+          start={start}
+          days={days}
+          today={view === "weeks" ? startOfWeek(today) : today}
+          stepDays={view === "weeks" ? 7 : 1}
+          onChange={setStart}
+        />
         <span className="range-label">
           {fmtLongDate(start)} – {fmtLongDate(addDays(start, days - 1))}
         </span>
-        <span className="zone-note" title={timeZone}>
-          Times in {zoneLabel(timeZone)}
+        <span className={`calendar-status ${loading ? "loading" : "empty"}`}>
+          {loading
+            ? "Loading…"
+            : sessions.length === 0
+            ? "No bookings in view"
+            : `${sessions.length} booking${sessions.length === 1 ? "" : "s"}${
+                upcomingInView !== sessions.length ? ` · ${upcomingInView} upcoming` : ""
+              }${toMark ? ` · ${toMark} to mark` : ""}`}
         </span>
-        {loading ? (
-          <span className="calendar-status loading">Loading…</span>
-        ) : (
-          <span className="calendar-status empty">
-            {sessions.length === 0
-              ? "No bookings this week"
-              : `${sessions.length} booking${sessions.length === 1 ? "" : "s"}${
-                  upcomingInView !== sessions.length ? ` · ${upcomingInView} upcoming` : ""
-                }`}
-          </span>
-        )}
         <div className="calendar-legend">
           <span>
-            <span className="legend-swatch schedule-swatch-available" /> Available
+            <span className="legend-swatch" style={{ background: hexToRgba(color, 0.22) }} /> Available
           </span>
           <span>
-            <span className="legend-swatch schedule-swatch-booked" /> Booked
+            <span className="legend-swatch" style={{ background: color }} /> Booked
           </span>
           <span>
-            <span className="legend-swatch schedule-swatch-blocked" /> Blocked off
+            <span className="legend-swatch legend-hatched" /> Blocked off
+          </span>
+          <span className="zone-note" title={timeZone}>
+            {zoneLabel(timeZone)}
           </span>
         </div>
+        <CalendarViewSwitch view={view} onViewChange={changeView} weeks={weeks} onWeeksChange={setWeeks} />
       </div>
       {error && <p className="error-text">{error}</p>}
 
-      <div className={`calendar-scroll schedule-scroll${loading ? " is-loading" : ""}`} ref={scrollRef}>
-        <div className="calendar-grid schedule-grid">
+      {view === "weeks" ? (
+        <MonthGrid
+          start={start}
+          weeks={weeks}
+          timeZone={timeZone}
+          today={today}
+          items={monthItems}
+          onDayClick={openDay}
+          loading={loading}
+        />
+      ) : (
+      <div className={`calendar-scroll${loading ? " is-loading" : ""}`} ref={scrollRef}>
+        <div className="calendar-grid fill-grid">
           <div className="calendar-time-axis">
             <div className="calendar-time-axis-header" />
             <div style={{ position: "relative", height: gridHeight }}>
               {HOURS.map((h) => (
-                <span key={h.index} className="calendar-time-label" style={{ top: h.index * 60 * PX_PER_MIN }}>
+                <span key={h.index} className="calendar-time-label" style={{ top: h.index * 60 * pxPerMin }}>
                   {h.label}
                 </span>
               ))}
@@ -176,25 +241,31 @@ export default function TutorSchedule({
           {displayDays.map((date) => {
             const segments = (ranges: RangeIso[]) =>
               ranges.flatMap((r) => {
-                const seg = daySegment(r, date, timeZone, PX_PER_MIN);
+                const seg = daySegment(r, date, timeZone, pxPerMin);
                 return seg ? [seg] : [];
               });
-            const isToday = date === today;
             return (
-              <div key={date} className="calendar-day-col schedule-day-col">
-                <div className={`calendar-day-header${isToday ? " is-today" : ""}`}>
+              <div key={date} className="calendar-day-col fill-day-col">
+                <div className={`calendar-day-header${date === today ? " is-today" : ""}`}>
                   <span className="dow">{dayFmt.format(new Date(`${date}T00:00:00.000Z`))}</span>
                   <span>{dateFmt.format(new Date(`${date}T00:00:00.000Z`))}</span>
                 </div>
                 <div className="calendar-body" style={{ height: gridHeight }}>
                   {HOURS.map((h) => (
-                    <div key={h.index} className="calendar-hour-line" style={{ top: h.index * 60 * PX_PER_MIN }} />
+                    <div key={h.index} className="calendar-hour-line" style={{ top: h.index * 60 * pxPerMin }} />
                   ))}
                   {segments(data?.available ?? []).map((seg, i) => (
                     <div
                       key={`a-${i}`}
-                      className="calendar-block schedule-available"
-                      style={{ top: seg.top, height: seg.height, left: 0, right: 0 }}
+                      className="calendar-block available"
+                      style={{
+                        top: seg.top,
+                        height: seg.height,
+                        left: 0,
+                        right: 0,
+                        background: hexToRgba(color, 0.14),
+                        borderLeftColor: color,
+                      }}
                       title={`Available ${fmtTime(seg.start, timeZone)}–${fmtTime(seg.end, timeZone)}`}
                     >
                       {fmtTime(seg.start, timeZone)}–{fmtTime(seg.end, timeZone)}
@@ -203,22 +274,22 @@ export default function TutorSchedule({
                   {segments(data?.blocked ?? []).map((seg, i) => (
                     <div
                       key={`b-${i}`}
-                      className="calendar-block schedule-blocked"
+                      className="calendar-block buffer"
                       style={{ top: seg.top, height: seg.height, left: 0, right: 0 }}
                       title={`Blocked off ${fmtTime(seg.start, timeZone)}–${fmtTime(seg.end, timeZone)}`}
                     />
                   ))}
                   {sessions.map((s) => {
-                    const seg = daySegment({ start: s.startAt, end: s.endAt }, date, timeZone, PX_PER_MIN);
+                    const seg = daySegment({ start: s.startAt, end: s.endAt }, date, timeZone, pxPerMin);
                     if (!seg) return null;
                     return (
                       <button
                         key={s.id}
                         type="button"
-                        className={`calendar-block schedule-session${s.id === selectedId ? " is-selected" : ""}${
-                          new Date(s.endAt).getTime() < Date.now() ? " is-past" : ""
-                        }`}
-                        style={{ top: seg.top, height: seg.height, left: 4, right: 4 }}
+                        className={`calendar-block session status-${s.status}${
+                          s.id === selectedId ? " is-selected" : ""
+                        }${new Date(s.endAt).getTime() < Date.now() ? " is-past" : ""}`}
+                        style={{ top: seg.top, height: seg.height, left: 4, right: 4, background: color }}
                         onClick={() => setSelectedId(s.id === selectedId ? null : s.id)}
                       >
                         <strong>
@@ -235,6 +306,7 @@ export default function TutorSchedule({
           })}
         </div>
       </div>
+      )}
 
       {selected && (
         <SessionDetails
@@ -246,10 +318,27 @@ export default function TutorSchedule({
             setSelectedId(null);
             setReloadKey((k) => k + 1);
           }}
+          onChanged={() => setReloadKey((k) => k + 1)}
         />
       )}
     </div>
   );
+}
+
+/** A session that has started but hasn't been marked completed or no-show yet. */
+export function needsOutcome(s: { status: string; startAt: string }): boolean {
+  return s.status === "confirmed" && new Date(s.startAt).getTime() <= Date.now();
+}
+
+/** " (completed)" etc. for tooltips. */
+export function statusSuffix(status: string): string {
+  return status === "completed"
+    ? " (completed)"
+    : status === "no_show"
+    ? " (no-show)"
+    : status === "cancelled"
+    ? " (cancelled)"
+    : "";
 }
 
 export function SessionDetails({
@@ -258,18 +347,44 @@ export function SessionDetails({
   canCancel,
   onClose,
   onCancelled,
+  onChanged,
 }: {
   session: ScheduleSession;
   timeZone: string;
+  /** The tutor or an admin: may cancel upcoming sessions and mark past ones. */
   canCancel: boolean;
   onClose: () => void;
   onCancelled: () => void;
+  /** After marking an outcome: reload, keeping the panel open. */
+  onChanged: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isPast = new Date(s.startAt).getTime() < Date.now();
+
+  async function markOutcome(outcome: "completed" | "no_show" | "confirmed") {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/bookings/${s.id}/outcome`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ outcome }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setError(body?.error ?? "Couldn't save. Try again.");
+        return;
+      }
+      onChanged();
+    } catch {
+      setError("Couldn't reach the server. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function cancel() {
     setBusy(true);
@@ -310,10 +425,10 @@ export function SessionDetails({
             <dd>{s.tutorName}</dd>
           </>
         )}
-        {s.status === "cancelled" && (
+        {s.status !== "confirmed" && (
           <>
             <dt>Status</dt>
-            <dd>Cancelled</dd>
+            <dd>{s.status === "no_show" ? "No-show" : s.status === "completed" ? "Completed" : "Cancelled"}</dd>
           </>
         )}
         <dt>When</dt>
@@ -340,6 +455,34 @@ export function SessionDetails({
           </>
         )}
       </dl>
+
+      {canCancel && isPast && ["confirmed", "completed", "no_show"].includes(s.status) && (
+        <div className="session-outcome">
+          <span className="session-outcome-label">
+            {s.status === "confirmed" ? "How did it go?" : "Outcome"}
+          </span>
+          <button
+            type="button"
+            className={`outcome-btn completed${s.status === "completed" ? " is-on" : ""}`}
+            disabled={busy}
+            aria-pressed={s.status === "completed"}
+            onClick={() => markOutcome(s.status === "completed" ? "confirmed" : "completed")}
+          >
+            ✓ Completed
+          </button>
+          <button
+            type="button"
+            className={`outcome-btn no-show${s.status === "no_show" ? " is-on" : ""}`}
+            disabled={busy}
+            aria-pressed={s.status === "no_show"}
+            onClick={() => markOutcome(s.status === "no_show" ? "confirmed" : "no_show")}
+          >
+            ✗ No-show
+          </button>
+          {s.status !== "confirmed" && <span className="muted small">Click again to undo.</span>}
+        </div>
+      )}
+      {error && !confirming && <p className="error-text">{error}</p>}
 
       {canCancel && s.status === "confirmed" && !isPast && (
         <div className="session-cancel">

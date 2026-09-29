@@ -31,6 +31,9 @@ export const CONFIG = {
 
   // Calendar booking UI
   DEFAULT_CALENDAR_DAYS: 7,
+  // Weeks view (month-style grid): how many weeks it shows by default, and the most.
+  DEFAULT_CALENDAR_WEEKS: 5,
+  MAX_CALENDAR_WEEKS: 8,
   MAX_CALENDAR_DAYS: 14,
   // Minutes to pad around an in-person session on both sides, so a tutor
   // isn't double-booked back-to-back with no travel time. Only applies
@@ -39,6 +42,9 @@ export const CONFIG = {
 
   // Timezone new tutors start in (each tutor can change theirs on their profile).
   DEFAULT_TIMEZONE: "America/Chicago",
+
+  // How long an emailed "My bookings" link keeps working.
+  BOOKING_LOOKUP_LINK_HOURS: 24,
 
   // Guest form
   DESCRIPTION_MAX_CHARS: 1000,

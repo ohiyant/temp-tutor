@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
-import { LOGIN_EMAILS_PER_HOUR, LOGIN_TOKEN_TTL_MIN, adminEmails, isAdminEmail, newToken, normalizeEmail } from "@/lib/auth";
+import { LOGIN_EMAILS_PER_HOUR, LOGIN_TOKEN_TTL_MIN, isAdminEmail, newToken, normalizeEmail } from "@/lib/auth";
 
 const bodySchema = z.object({ email: z.string().trim().email("Enter a valid email.") });
 
@@ -21,15 +21,7 @@ export async function POST(req: NextRequest) {
   const response: { ok: true; devLink?: string } = { ok: true };
 
   const tutor = await prisma.tutor.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
-  if (!tutor && !isAdminEmail(email)) {
-    // The response stays the same (so the form can't reveal who tutors here),
-    // but say so in the server log, which is where to look when an expected
-    // sign-in email never arrives.
-    console.info(
-      `[auth] sign-in requested for an email that isn't a tutor or in ADMIN_EMAILS (${adminEmails().length} admin email(s) configured); no email sent`
-    );
-    return NextResponse.json(response);
-  }
+  if (!tutor && !isAdminEmail(email)) return NextResponse.json(response);
 
   const recent = await prisma.loginToken.count({
     where: { email, createdAt: { gt: new Date(Date.now() - 60 * 60 * 1000) } },

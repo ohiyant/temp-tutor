@@ -6,7 +6,7 @@ import { checkSessionFits, hasOverlap, sessionPriceCents } from "@/lib/booking";
 import { sendEmail } from "@/lib/email";
 import type { BusyRange } from "@/lib/availability";
 import { formatDateTime, isValidTimeZone } from "@/lib/timezone";
-import { cancelPath, newManageToken, reschedulePath } from "@/lib/manageLinks";
+import { appUrl, cancelPath, newManageToken, reschedulePath } from "@/lib/manageLinks";
 import { manageLinksText } from "@/lib/sessionEmails";
 
 /**
@@ -256,6 +256,7 @@ async function sendConfirmationEmails(
     ...created.sessions.flatMap((s) => [line(s, input.timeZone), ...manageLinksText(s).map((l) => `    ${l}`)]),
     "",
     `Need to change plans? You can reschedule up to ${CONFIG.RESCHEDULE_MIN_NOTICE_HOURS} hours before, or cancel any time before the session.`,
+    `See all your bookings any time at ${appUrl()}/my-bookings`,
     "",
     "See you then!",
     "TutorSpot",

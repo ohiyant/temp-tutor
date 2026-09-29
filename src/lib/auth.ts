@@ -42,13 +42,7 @@ export function normalizeEmail(email: string): string {
 }
 
 export function adminEmails(): string[] {
-  // Tolerate quotes around the whole value or each email, which easily sneak
-  // in when a .env line like ADMIN_EMAILS="a@b.com" is pasted into a host's
-  // settings UI (the quotes then become part of the value).
-  return (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => normalizeEmail(e.replace(/["']/g, "")))
-    .filter(Boolean);
+  return (process.env.ADMIN_EMAILS ?? "").split(",").map(normalizeEmail).filter(Boolean);
 }
 
 export function isAdminEmail(email: string): boolean {

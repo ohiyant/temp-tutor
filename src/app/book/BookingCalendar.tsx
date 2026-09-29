@@ -35,12 +35,19 @@ import {
   daySegment,
   fmtLongDate,
   fmtPrice,
+  fmtShortTime,
   fmtTime,
   hourMarks as buildHourMarks,
+  initialScrollTop,
   localDate,
   minutesFromWindowStart,
   todayIn,
+  hexToRgba,
+  startOfWeek,
 } from "@/lib/calendarUi";
+import { useFitCalendar } from "@/components/useFitCalendar";
+import CalendarViewSwitch, { type CalendarView } from "@/components/CalendarViewSwitch";
+import MonthGrid, { type MonthItem } from "@/components/MonthGrid";
 import { localTimeZone } from "@/lib/timezone";
 import TimeZoneSelect from "@/components/TimeZoneSelect";
 import CalendarNav from "@/components/CalendarNav";
@@ -105,22 +112,13 @@ interface Selected {
 
 // ---------- Layout constants for the grid ----------
 
-// The grid is scaled to fit the available height, but never squashed below
-// this — past that point the calendar scrolls inside its own box instead.
-const MIN_PX_PER_MIN = 0.6;
-// Same idea horizontally: columns stretch to fill the width down to this.
+// The height scaling is shared with the other calendars (useFitCalendar).
+// Columns stretch to fill the width, down to this minimum; this calendar
+// measures them (rather than using flex) because drag previews need pixels.
 const MIN_COLUMN_WIDTH_PX = 96;
 const TIME_AXIS_WIDTH_PX = 52; // keep in sync with .calendar-time-axis
-const DAY_HEADER_HEIGHT_PX = 44; // keep in sync with .calendar-day-header
 // Pointer movement below this counts as a click/tap rather than a drag.
 const DRAG_THRESHOLD_PX = 4;
-
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 // Overlay offset when several tutors' blocks share one day column: each
 // tutor after the first is nudged right and slightly narrowed, so blocks
@@ -235,6 +233,10 @@ export default function BookingCalendar() {
   const timeZone = timeZoneChoice ?? "UTC";
   const [calendarStart, setCalendarStart] = useState<string>(() => todayIn("UTC"));
   const [calendarDays, setCalendarDays] = useState<number>(CONFIG.DEFAULT_CALENDAR_DAYS);
+  // Days view shows `calendarDays` days; weeks view shows whole weeks from a Sunday.
+  const [view, setView] = useState<CalendarView>("days");
+  const [weeks, setWeeks] = useState<number>(CONFIG.DEFAULT_CALENDAR_WEEKS);
+  const rangeDays = view === "weeks" ? weeks * 7 : calendarDays;
 
   const [calendarData, setCalendarData] = useState<CalendarResponse | null>(null);
   const [loadingCalendar, setLoadingCalendar] = useState(false);
@@ -242,8 +244,7 @@ export default function BookingCalendar() {
   const [reloadKey, setReloadKey] = useState(0);
 
   // Size of the calendar's scroll box, so the grid can be scaled to fill it.
-  const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
-  const [scrollSize, setScrollSize] = useState({ width: 0, height: 0 });
+  const { scrollRef, scrollEl, size: scrollSize, pxPerMin } = useFitCalendar();
 
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -295,7 +296,7 @@ export default function BookingCalendar() {
       subjectId,
       mode: filterMode,
       start: calendarStart,
-      days: String(calendarDays),
+      days: String(rangeDays),
       tz: timeZoneChoice,
     });
     fetch(`/api/calendar?${params.toString()}`)
@@ -316,16 +317,7 @@ export default function BookingCalendar() {
     return () => {
       cancelled = true;
     };
-  }, [subjectId, filterMode, calendarStart, calendarDays, reloadKey, timeZoneChoice]);
-
-  useEffect(() => {
-    if (!scrollEl) return;
-    const measure = () => setScrollSize({ width: scrollEl.clientWidth, height: scrollEl.clientHeight });
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(scrollEl);
-    return () => observer.disconnect();
-  }, [scrollEl]);
+  }, [subjectId, filterMode, calendarStart, rangeDays, reloadKey, timeZoneChoice]);
 
   const subjectName = subjects.find((s) => s.id === subjectId)?.name ?? "";
 
@@ -334,6 +326,19 @@ export default function BookingCalendar() {
     ? allTutorsForFilter.filter((t) => t.tutorId === filterTutorId)
     : allTutorsForFilter;
 
+  // The hour grid covers the whole day and scrolls: when new availability
+  // loads (or the grid appears), open it just above the earliest free time,
+  // or at 7am if there's none.
+  const loadedKey = calendarData ? `${calendarData.start}|${calendarData.timeZone}|${calendarData.days.length}` : null;
+  useEffect(() => {
+    if (!scrollEl) return;
+    const starts = (calendarData?.tutors ?? []).flatMap((t) =>
+      t.free.map((f) => minutesFromWindowStart(f.start, timeZone))
+    );
+    scrollEl.scrollTop = initialScrollTop(starts.length ? Math.min(...starts) : null, pxPerMin);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedKey, scrollEl, pxPerMin, scrollSize.height]);
+
   // The grid is drawn from the requested range, not the response, so it's
   // there even with no subject picked (or while a new range is loading).
   const displayDays = Array.from({ length: calendarDays }, (_, i) => addDays(calendarStart, i));
@@ -341,10 +346,6 @@ export default function BookingCalendar() {
   const columnWidthPx = scrollSize.width
     ? Math.max(MIN_COLUMN_WIDTH_PX, Math.floor((scrollSize.width - TIME_AXIS_WIDTH_PX) / dayCount))
     : 168;
-  // Leave a few px of slack so rounding never tips the box into scrolling.
-  const pxPerMin = scrollSize.height
-    ? Math.max(MIN_PX_PER_MIN, (scrollSize.height - DAY_HEADER_HEIGHT_PX - 8) / WINDOW_LENGTH_MIN)
-    : 1;
   const gridHeight = WINDOW_LENGTH_MIN * pxPerMin;
   // Blocks sit inside the column's 1px right border.
   const blockAreaWidth = columnWidthPx - 1;
@@ -549,6 +550,40 @@ export default function BookingCalendar() {
   const hourMarks = buildHourMarks();
   const today = todayIn(timeZone);
 
+  function changeView(next: CalendarView) {
+    setView(next);
+    if (next === "weeks") setCalendarStart(startOfWeek(calendarStart));
+  }
+
+  function openDay(date: string) {
+    setView("days");
+    setCalendarStart(date);
+  }
+
+  // Weeks view: each tutor's open times as tinted chips (click a day to book
+  // in the days view), and the student's picks as solid ones.
+  const monthItems: MonthItem[] = [
+    ...visibleTutors.flatMap((t) =>
+      t.free.map((f, i) => ({
+        id: `${t.tutorId}-${i}`,
+        start: f.start,
+        end: f.end,
+        label: `${t.tutorName.split(" ")[0]} ${fmtShortTime(f.start, timeZone)}–${fmtShortTime(f.end, timeZone)}`,
+        title: `${t.tutorName} free ${fmtTime(f.start, timeZone)}–${fmtTime(f.end, timeZone)} — click to book`,
+        color: t.color,
+        variant: "tint" as const,
+      }))
+    ),
+    ...selections.map((sel) => ({
+      id: sel.id,
+      start: sel.startAt,
+      end: selectionEndIso(sel),
+      label: `${fmtShortTime(sel.startAt, timeZone)} ${sel.tutorName.split(" ")[0]} (selected)`,
+      color: sel.color,
+      variant: "solid" as const,
+    })),
+  ];
+
   return (
     <div className={`container-wide ${step === "calendar" ? "calendar-mode" : ""}`}>
       <h1>Book Sessions</h1>
@@ -595,7 +630,7 @@ export default function BookingCalendar() {
                 ))}
               </select>
             </div>
-            <div className="form-field">
+            <div className="form-field" hidden={view === "weeks"}>
               <label>Days shown</label>
               <input
                 type="number"
@@ -620,10 +655,17 @@ export default function BookingCalendar() {
           </div>
 
           <div className="calendar-nav">
-            <CalendarNav start={calendarStart} days={calendarDays} today={today} onChange={setCalendarStart} />
+            <CalendarNav
+              start={calendarStart}
+              days={rangeDays}
+              today={view === "weeks" ? startOfWeek(today) : today}
+              stepDays={view === "weeks" ? 7 : 1}
+              onChange={setCalendarStart}
+            />
             <span className="range-label">
-              {fmtLongDate(calendarStart)} – {fmtLongDate(addDays(calendarStart, calendarDays - 1))}
+              {fmtLongDate(calendarStart)} – {fmtLongDate(addDays(calendarStart, rangeDays - 1))}
             </span>
+            <CalendarViewSwitch view={view} onViewChange={changeView} weeks={weeks} onWeeksChange={setWeeks} />
             {!subjectId ? (
               <span className="calendar-status prompt">Pick a subject to see tutors&apos; availability</span>
             ) : loadingCalendar ? (
@@ -650,7 +692,18 @@ export default function BookingCalendar() {
             </div>
           </div>
 
-          <div className={`calendar-scroll${loadingCalendar ? " is-loading" : ""}`} ref={setScrollEl}>
+          {view === "weeks" ? (
+            <MonthGrid
+              start={calendarStart}
+              weeks={weeks}
+              timeZone={timeZone}
+              today={today}
+              items={monthItems}
+              onDayClick={openDay}
+              loading={loadingCalendar}
+            />
+          ) : (
+          <div className={`calendar-scroll${loadingCalendar ? " is-loading" : ""}`} ref={scrollRef}>
             <div className="calendar-grid">
               <div className="calendar-time-axis">
                 <div className="calendar-time-axis-header" />
@@ -665,7 +718,7 @@ export default function BookingCalendar() {
 
               {displayDays.map((date) => (
                 <div key={date} className="calendar-day-col" style={{ width: columnWidthPx }}>
-                  <div className="calendar-day-header">
+                  <div className={`calendar-day-header${date === today ? " is-today" : ""}`}>
                     <span className="dow">{dayFmt.format(new Date(`${date}T00:00:00.000Z`))}</span>
                     <span>{dateFmt.format(new Date(`${date}T00:00:00.000Z`))}</span>
                   </div>
@@ -802,11 +855,14 @@ export default function BookingCalendar() {
               ))}
             </div>
           </div>
+          )}
 
           <div className="selection-bar">
             <span className="summary">
               {selections.length === 0
-                ? coarsePointer
+                ? view === "weeks"
+                  ? `${coarsePointer ? "Tap" : "Click"} a day to see its open times and book.`
+                  : coarsePointer
                   ? `Tap a free block to add a ${CONFIG.DEFAULT_SESSION_LENGTH_MIN}-minute session. You can change the length on the next step.`
                   : `Click a free block to add a ${CONFIG.DEFAULT_SESSION_LENGTH_MIN}-minute session, or drag down to choose the length. You can add several.`
                 : `${selections.length} session${selections.length === 1 ? "" : "s"} selected · ${fmtPrice(totalCents)}`}
@@ -1017,6 +1073,9 @@ export default function BookingCalendar() {
             >
               Book more sessions
             </button>
+            <a href="/my-bookings" className="done-my-bookings">
+              See all my bookings
+            </a>
           </div>
         </div>
       )}

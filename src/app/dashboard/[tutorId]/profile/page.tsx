@@ -3,8 +3,8 @@ import { requireTutorPage } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import ProfileManager from "./ProfileManager";
 import RemoveTutor from "./RemoveTutor";
-import Link from "next/link";
 
+/** Rate & subjects tab: rate, session types, subjects, contact and timezone. */
 export default async function ProfilePage({
   params,
 }: {
@@ -28,33 +28,28 @@ export default async function ProfilePage({
     : [0, 0];
 
   return (
-    <div className="container">
-      <p className="back-link">
-        <Link href={`/dashboard/${tutor.id}`}>← Back to schedule</Link>
-      </p>
-      <h1>{tutor.name} — Profile</h1>
-      <ProfileManager
-        tutorId={tutor.id}
-        isAdmin={user.isAdmin}
-        initialName={tutor.name}
-        initialEmail={tutor.email}
-        allSubjects={allSubjects}
-        initialSubjectIds={tutor.subjects.map((s) => s.subjectId)}
-        initialPhone={tutor.phone ?? ""}
-        initialHourlyRateCents={tutor.hourlyRateCents}
-        initialOnlineAvailable={tutor.onlineAvailable}
-        initialInPersonAvailable={tutor.inPersonAvailable}
-        initialTimeZone={tutor.timeZone}
-      />
-
-      {user.isAdmin && (
-        <RemoveTutor
-          tutorId={tutor.id}
-          tutorName={tutor.name}
-          totalBookings={totalBookings}
-          upcomingBookings={upcomingBookings}
-        />
-      )}
-    </div>
+    <ProfileManager
+      tutorId={tutor.id}
+      isAdmin={user.isAdmin}
+      initialName={tutor.name}
+      initialEmail={tutor.email}
+      allSubjects={allSubjects}
+      initialSubjectIds={tutor.subjects.map((s) => s.subjectId)}
+      initialPhone={tutor.phone ?? ""}
+      initialHourlyRateCents={tutor.hourlyRateCents}
+      initialOnlineAvailable={tutor.onlineAvailable}
+      initialInPersonAvailable={tutor.inPersonAvailable}
+      initialTimeZone={tutor.timeZone}
+      extraPanel={
+        user.isAdmin ? (
+          <RemoveTutor
+            tutorId={tutor.id}
+            tutorName={tutor.name}
+            totalBookings={totalBookings}
+            upcomingBookings={upcomingBookings}
+          />
+        ) : undefined
+      }
+    />
   );
 }

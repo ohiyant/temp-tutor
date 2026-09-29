@@ -31,7 +31,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 </form>
               </>
             ) : (
-              <a href="/login">Tutor sign-in</a>
+              <>
+                <a href="/my-bookings">My bookings</a>
+                <a href="/login">Tutor sign-in</a>
+              </>
             )}
           </nav>
         </header>

@@ -1,10 +1,10 @@
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import TutorWorkspace from "@/components/TutorWorkspace";
 
 export default async function HomePage() {
-  // A signed-in tutor sees their own schedule instead of the student landing page.
+  // A signed-in tutor goes to their own schedule instead of the student landing page.
   const user = await getCurrentUser();
-  if (user?.tutor) return <TutorWorkspace tutorId={user.tutor.id} user={user} />;
+  if (user?.tutor) redirect(`/dashboard/${user.tutor.id}`);
 
   return (
     <div className="container">

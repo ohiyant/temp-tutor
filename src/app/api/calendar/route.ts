@@ -11,7 +11,8 @@ const querySchema = z.object({
   mode: z.enum(["online", "in_person", "both"]),
   tutorId: z.string().min(1).optional(),
   start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "start must be YYYY-MM-DD"),
-  days: z.coerce.number().int().min(1).max(CONFIG.MAX_CALENDAR_DAYS).default(CONFIG.DEFAULT_CALENDAR_DAYS),
+  // Up to the weeks view's range (the days view asks for far fewer).
+  days: z.coerce.number().int().min(1).max(CONFIG.MAX_CALENDAR_WEEKS * 7).default(CONFIG.DEFAULT_CALENDAR_DAYS),
   /** The viewer's timezone: `start` and the day columns are dates in this zone. */
   tz: z.string().refine(isValidTimeZone, "Unknown timezone").default("UTC"),
   bufferMin: z.coerce.number().int().min(0).default(CONFIG.IN_PERSON_TRANSPORT_BUFFER_MIN),

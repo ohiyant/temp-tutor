@@ -8,7 +8,8 @@ import { CONFIG } from "@/config";
 
 const querySchema = z.object({
   start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "start must be YYYY-MM-DD"),
-  days: z.coerce.number().int().min(1).max(CONFIG.MAX_CALENDAR_DAYS).default(CONFIG.DEFAULT_CALENDAR_DAYS),
+  // Up to the weeks view's range (the days view asks for far fewer).
+  days: z.coerce.number().int().min(1).max(CONFIG.MAX_CALENDAR_WEEKS * 7).default(CONFIG.DEFAULT_CALENDAR_DAYS),
 });
 
 /**
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest, { params }: { params: { tutorId: str
   const sessions = await prisma.session.findMany({
     where: {
       tutorId: tutor.id,
-      status: { in: ["confirmed", "completed"] },
+      status: { in: ["confirmed", "completed", "no_show"] },
       startAt: { lt: rangeEnd },
       endAt: { gt: rangeStart },
     },

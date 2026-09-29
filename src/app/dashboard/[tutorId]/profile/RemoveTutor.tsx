@@ -41,7 +41,7 @@ export default function RemoveTutor({
   }
 
   return (
-    <div className="card danger-zone">
+    <section className="card panel danger-zone">
       <h2>Remove tutor</h2>
       <p className="small">
         Permanently deletes {tutorName}, their availability, and{" "}
@@ -87,6 +87,6 @@ export default function RemoveTutor({
         </div>
       )}
       {error && <p className="error-text">{error}</p>}
-    </div>
+    </section>
   );
 }
