@@ -16,6 +16,8 @@ export const CONFIG = {
   // Rescheduling
   RESCHEDULE_FEE_PCT: 0.25,
   RESCHEDULE_MIN_NOTICE_HOURS: 48,
+  // Spacing of the start times offered on the reschedule page.
+  RESCHEDULE_SLOT_INCREMENT_MIN: 15,
   // TODO: revisit — currently locked to same duration on reschedule.
   ALLOW_RESCHEDULE_DURATION_CHANGE: false,
 
@@ -34,6 +36,9 @@ export const CONFIG = {
   // isn't double-booked back-to-back with no travel time. Only applies
   // when the *adjacent* confirmed session is in-person.
   IN_PERSON_TRANSPORT_BUFFER_MIN: 30,
+
+  // Timezone new tutors start in (each tutor can change theirs on their profile).
+  DEFAULT_TIMEZONE: "America/Chicago",
 
   // Guest form
   DESCRIPTION_MAX_CHARS: 1000,

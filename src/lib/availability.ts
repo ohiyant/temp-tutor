@@ -6,14 +6,15 @@
  * every edge case without touching a database, and safe to reuse anywhere
  * (API route, a cron job re-validating a hold, a script).
  *
- * KNOWN SIMPLIFICATION (documented on purpose, good to mention if asked):
- * all times are treated as UTC "wall clock" values. There's no per-tutor
- * timezone field yet, so a tutor's "15:00" recurring block means 15:00 UTC
- * for everyone. Fine for a single-timezone MVP; real multi-timezone tutor
- * support would need a tutor.timezone field and a proper tz library
- * (e.g. date-fns-tz or Luxon) to convert local wall-clock times to UTC
- * instants, especially across DST boundaries.
+ * TIMEZONES: a tutor's recurring blocks and exceptions are "HH:mm" wall-clock
+ * times in the tutor's own IANA timezone (`timeZone`, default "UTC"). The
+ * engine walks the tutor's local calendar dates and converts each block to
+ * real UTC instants for that date, so a "15:00" block stays 3pm local across
+ * daylight saving changes. Everything it returns (and every busy range it's
+ * given) is a real instant. See src/lib/timezone.ts.
  */
+
+import { dayOfWeek, hhmmToMinutes, zonedParts, zonedTimeToUtc, addDays } from "./timezone";
 
 export interface TimeRange {
   start: Date;
@@ -54,29 +55,8 @@ export interface GetAvailableSlotsInput {
   busyRanges: BusyRange[];
   /** Minutes of transport buffer to pad around in-person busy ranges. Default 0 (off). */
   bufferMin?: number;
-}
-
-/** "15:00" -> 900 (minutes since midnight) */
-function timeStringToMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
-/** Build a UTC Date for `date`'s calendar day at the given minutes-since-midnight. */
-function dateAtMinutes(date: Date, minutesSinceMidnight: number): Date {
-  const d = new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-  );
-  d.setUTCMinutes(minutesSinceMidnight);
-  return d;
-}
-
-function isSameCalendarDate(a: Date, b: Date): boolean {
-  return (
-    a.getUTCFullYear() === b.getUTCFullYear() &&
-    a.getUTCMonth() === b.getUTCMonth() &&
-    a.getUTCDate() === b.getUTCDate()
-  );
+  /** The tutor's IANA timezone, which blocks and exceptions are written in. Default "UTC". */
+  timeZone?: string;
 }
 
 function isoDateOnly(d: Date): string {
@@ -138,7 +118,7 @@ export function computeBufferPadding(busyRanges: BusyRange[], bufferMin: number)
 }
 
 export interface DayFreeRanges {
-  date: string; // YYYY-MM-DD, UTC calendar date
+  date: string; // YYYY-MM-DD, the tutor's local calendar date
   ranges: TimeRange[];
 }
 
@@ -149,41 +129,35 @@ interface ComputeDailyFreeRangesInput {
   exceptions: AvailabilityExceptionInput[];
   busyRanges: BusyRange[];
   bufferMin: number;
+  timeZone: string;
 }
 
 /** Shared core: recurring blocks -> apply exceptions -> clip to range ->
- *  subtract busy (+ buffer) time. Returns continuous free ranges per day,
- *  with NO notice/window filtering applied yet (that's start-time-specific
- *  and handled by each caller below, since the two callers need it applied
+ *  subtract busy (+ buffer) time. Returns continuous free ranges per day of
+ *  the TUTOR's calendar (`date` is their local date), with NO
+ *  notice/window filtering applied yet (that's start-time-specific and
+ *  handled by each caller below, since the two callers need it applied
  *  differently). */
 function computeDailyFreeRanges(input: ComputeDailyFreeRangesInput): DayFreeRanges[] {
-  const { rangeStart, rangeEnd, recurringBlocks, exceptions, busyRanges, bufferMin } = input;
+  const { rangeStart, rangeEnd, recurringBlocks, exceptions, busyRanges, bufferMin, timeZone } = input;
   const effectiveBusy = expandBusyForBuffer(busyRanges, bufferMin);
+  const atLocal = (date: string, hhmm: string) => zonedTimeToUtc(date, hhmmToMinutes(hhmm), timeZone);
 
   const results: DayFreeRanges[] = [];
-  const cursor = new Date(
-    Date.UTC(rangeStart.getUTCFullYear(), rangeStart.getUTCMonth(), rangeStart.getUTCDate())
-  );
-  const endBoundary = new Date(
-    Date.UTC(rangeEnd.getUTCFullYear(), rangeEnd.getUTCMonth(), rangeEnd.getUTCDate())
-  );
+  const lastDate = zonedParts(rangeEnd, timeZone).date;
 
-  while (cursor.getTime() <= endBoundary.getTime()) {
-    const dayOfWeek = cursor.getUTCDay();
+  for (let date = zonedParts(rangeStart, timeZone).date; date <= lastDate; date = addDays(date, 1)) {
+    const dow = dayOfWeek(date);
 
     let freeRanges: TimeRange[] = recurringBlocks
-      .filter((b) => b.dayOfWeek === dayOfWeek)
-      .map((b) => ({
-        start: dateAtMinutes(cursor, timeStringToMinutes(b.startTime)),
-        end: dateAtMinutes(cursor, timeStringToMinutes(b.endTime)),
-      }));
+      .filter((b) => b.dayOfWeek === dow)
+      .map((b) => ({ start: atLocal(date, b.startTime), end: atLocal(date, b.endTime) }));
 
-    const todaysExceptions = exceptions.filter((e) => isSameCalendarDate(e.date, cursor));
+    // An exception's `date` is stored as UTC midnight of the tutor-local
+    // calendar date it applies to, so compare by its Y-M-D.
+    const todaysExceptions = exceptions.filter((e) => isoDateOnly(e.date) === date);
     for (const exc of todaysExceptions) {
-      const excRange: TimeRange = {
-        start: dateAtMinutes(cursor, timeStringToMinutes(exc.startTime)),
-        end: dateAtMinutes(cursor, timeStringToMinutes(exc.endTime)),
-      };
+      const excRange: TimeRange = { start: atLocal(date, exc.startTime), end: atLocal(date, exc.endTime) };
       if (exc.isAvailable) {
         freeRanges.push(excRange);
       } else {
@@ -196,13 +170,10 @@ function computeDailyFreeRanges(input: ComputeDailyFreeRangesInput): DayFreeRang
       .filter((r): r is TimeRange => r !== null);
 
     for (const busy of effectiveBusy) {
-      if (isSameCalendarDate(busy.start, cursor) || isSameCalendarDate(busy.end, cursor)) {
-        freeRanges = subtractRange(freeRanges, busy);
-      }
+      freeRanges = subtractRange(freeRanges, busy);
     }
 
-    results.push({ date: isoDateOnly(cursor), ranges: freeRanges });
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    results.push({ date, ranges: freeRanges });
   }
 
   return results;
@@ -221,12 +192,21 @@ export function getAvailableSlots(input: GetAvailableSlotsInput): Date[] {
     exceptions,
     busyRanges,
     bufferMin = 0,
+    timeZone = "UTC",
   } = input;
 
   const earliestAllowedStart = new Date(now.getTime() + minBookingNoticeHours * 60 * 60 * 1000);
   const latestAllowedStart = new Date(now.getTime() + maxBookingWindowHours * 60 * 60 * 1000);
 
-  const dailyFree = computeDailyFreeRanges({ rangeStart, rangeEnd, recurringBlocks, exceptions, busyRanges, bufferMin });
+  const dailyFree = computeDailyFreeRanges({
+    rangeStart,
+    rangeEnd,
+    recurringBlocks,
+    exceptions,
+    busyRanges,
+    bufferMin,
+    timeZone,
+  });
 
   const slots: Date[] = [];
   for (const { ranges } of dailyFree) {
@@ -256,6 +236,12 @@ export interface GetFreeRangesInput {
   exceptions: AvailabilityExceptionInput[];
   busyRanges: BusyRange[];
   bufferMin?: number;
+  /** The tutor's IANA timezone, which blocks and exceptions are written in. Default "UTC". */
+  timeZone?: string;
+  /** If set, earliestAllowedStart is rounded UP and latestAllowedStart DOWN
+   *  to a multiple of this many minutes, so free ranges clipped by the
+   *  booking notice start on a clean time (3:40, not 3:37). */
+  startIncrementMin?: number;
 }
 
 export interface GetFreeRangesResult {
@@ -283,12 +269,27 @@ export function getFreeRanges(input: GetFreeRangesInput): GetFreeRangesResult {
     exceptions,
     busyRanges,
     bufferMin = 0,
+    startIncrementMin,
+    timeZone = "UTC",
   } = input;
 
-  const earliestAllowedStart = new Date(now.getTime() + minBookingNoticeHours * 60 * 60 * 1000);
-  const latestAllowedStart = new Date(now.getTime() + maxBookingWindowHours * 60 * 60 * 1000);
+  let earliestAllowedStart = new Date(now.getTime() + minBookingNoticeHours * 60 * 60 * 1000);
+  let latestAllowedStart = new Date(now.getTime() + maxBookingWindowHours * 60 * 60 * 1000);
+  if (startIncrementMin) {
+    const stepMs = startIncrementMin * 60 * 1000;
+    earliestAllowedStart = new Date(Math.ceil(earliestAllowedStart.getTime() / stepMs) * stepMs);
+    latestAllowedStart = new Date(Math.floor(latestAllowedStart.getTime() / stepMs) * stepMs);
+  }
 
-  const daily = computeDailyFreeRanges({ rangeStart, rangeEnd, recurringBlocks, exceptions, busyRanges, bufferMin });
+  const daily = computeDailyFreeRanges({
+    rangeStart,
+    rangeEnd,
+    recurringBlocks,
+    exceptions,
+    busyRanges,
+    bufferMin,
+    timeZone,
+  });
 
   const days = daily.map(({ date, ranges }) => ({
     date,
@@ -301,4 +302,17 @@ export function getFreeRanges(input: GetFreeRangesInput): GetFreeRangesResult {
   }));
 
   return { earliestAllowedStart, latestAllowedStart, days };
+}
+
+/** A tutor's raw availability per day — recurring blocks with exceptions
+ *  applied, but NOT reduced by bookings, notice or booking window. What the
+ *  tutor's own schedule view draws underneath their bookings. */
+export function getAvailabilityRanges(input: {
+  rangeStart: Date;
+  rangeEnd: Date;
+  recurringBlocks: RecurringBlock[];
+  exceptions: AvailabilityExceptionInput[];
+  timeZone: string;
+}): DayFreeRanges[] {
+  return computeDailyFreeRanges({ ...input, busyRanges: [], bufferMin: 0 });
 }

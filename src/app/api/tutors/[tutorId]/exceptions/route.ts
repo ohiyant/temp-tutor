@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireTutorApi } from "@/lib/auth";
 import { z } from "zod";
 
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -17,6 +18,9 @@ const createSchema = z
   });
 
 export async function POST(req: NextRequest, { params }: { params: { tutorId: string } }) {
+  const auth = await requireTutorApi(params.tutorId);
+  if (auth instanceof NextResponse) return auth;
+
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
@@ -37,6 +41,9 @@ export async function POST(req: NextRequest, { params }: { params: { tutorId: st
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { tutorId: string } }) {
+  const auth = await requireTutorApi(params.tutorId);
+  if (auth instanceof NextResponse) return auth;
+
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 

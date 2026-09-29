@@ -33,6 +33,8 @@ model Tutor {
   inPersonAvailable      Boolean  @default(false)
   minBookingNoticeHours  Int      @default(24)
   maxBookingWindowHours  Int      @default(720) // 30 days
+  // IANA timezone the tutor's weekly hours and exceptions are written in.
+  timeZone               String   @default("America/Chicago")
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
@@ -66,7 +68,7 @@ model AvailabilityBlock {
   id        String @id @default(cuid())
   tutorId   String
   dayOfWeek Int    // 0 = Sunday ... 6 = Saturday
-  startTime String // "15:00" (stored as HH:mm, interpreted in tutor's local tz)
+  startTime String // "15:00" (HH:mm wall-clock time in the tutor's timeZone)
   endTime   String // "18:00"
 
   tutor Tutor @relation(fields: [tutorId], references: [id], onDelete: Cascade)
@@ -96,9 +98,9 @@ model Session {
   description  String        @db.VarChar(1000)
 
   mode         SessionMode
-  startAt      DateTime
+  startAt      DateTime // real UTC instant
   endAt        DateTime
-  timezone     String
+  timezone     String // the student's timezone when booking, used for their emails
   durationMin  Int
   priceCents   Int
   status       SessionStatus @default(pending_payment)
@@ -130,4 +132,32 @@ model BookingHold {
   tutor Tutor @relation(fields: [tutorId], references: [id])
 
   @@index([tutorId, startAt, endAt])
+}
+
+// ---------- Tutor/admin sign-in (emailed magic links) ----------
+// Identity is just an email address: it signs in as the Tutor with that
+// email, and/or as an admin if it's listed in ADMIN_EMAILS. Only SHA-256
+// hashes of tokens are stored, so a database leak can't be replayed.
+
+// One-time sign-in link, valid for a few minutes.
+model LoginToken {
+  id        String    @id @default(cuid())
+  email     String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email, createdAt])
+}
+
+// A signed-in browser. The cookie holds the raw token.
+model AuthSession {
+  id        String   @id @default(cuid())
+  email     String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
 }

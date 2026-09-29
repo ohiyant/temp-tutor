@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import TimeZoneSelect from "@/components/TimeZoneSelect";
 
 interface Subject {
   id: string;
@@ -9,26 +11,39 @@ interface Subject {
 
 export default function ProfileManager({
   tutorId,
+  isAdmin,
+  initialName,
+  initialEmail,
   allSubjects,
   initialSubjectIds,
   initialPhone,
   initialHourlyRateCents,
   initialOnlineAvailable,
   initialInPersonAvailable,
+  initialTimeZone,
 }: {
   tutorId: string;
+  /** Admins can also change the tutor's name and sign-in email. */
+  isAdmin: boolean;
+  initialName: string;
+  initialEmail: string;
   allSubjects: Subject[];
   initialSubjectIds: string[];
   initialPhone: string;
   initialHourlyRateCents: number;
   initialOnlineAvailable: boolean;
   initialInPersonAvailable: boolean;
+  initialTimeZone: string;
 }) {
+  const router = useRouter();
+  const [name, setName] = useState(initialName);
+  const [email, setEmail] = useState(initialEmail);
   const [subjectIds, setSubjectIds] = useState(new Set(initialSubjectIds));
   const [phone, setPhone] = useState(initialPhone);
   const [rateDollars, setRateDollars] = useState((initialHourlyRateCents / 100).toFixed(2));
   const [online, setOnline] = useState(initialOnlineAvailable);
   const [inPerson, setInPerson] = useState(initialInPersonAvailable);
+  const [timeZone, setTimeZone] = useState(initialTimeZone);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -54,6 +69,10 @@ export default function ProfileManager({
       setError("Select at least one of Online or In-person.");
       return;
     }
+    if (isAdmin && (!name.trim() || !/^\S+@\S+\.\S+$/.test(email.trim()))) {
+      setError("Enter a name and a valid email.");
+      return;
+    }
     if (subjectIds.size === 0) {
       setError("Select at least one subject.");
       return;
@@ -65,7 +84,9 @@ export default function ProfileManager({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(isAdmin ? { name: name.trim(), email: email.trim() } : {}),
           phone: phone || null,
+          timeZone,
           hourlyRateCents: rateCents,
           onlineAvailable: online,
           inPersonAvailable: inPerson,
@@ -74,6 +95,7 @@ export default function ProfileManager({
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Failed to save");
       setSavedAt(Date.now());
+      router.refresh(); // pick up a new name/email in the page heading
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -85,6 +107,19 @@ export default function ProfileManager({
     <div className="card">
       {error && <p className="error-text">{error}</p>}
       {savedAt && !error && <p style={{ color: "#16a34a", fontSize: "0.9rem" }}>Saved.</p>}
+
+      {isAdmin && (
+        <div className="form-row">
+          <div className="form-field">
+            <label htmlFor="tutor-name">Name</label>
+            <input id="tutor-name" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="form-field">
+            <label htmlFor="tutor-email">Sign-in email</label>
+            <input id="tutor-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+        </div>
+      )}
 
       <div className="form-field" style={{ marginBottom: "1rem" }}>
         <label>Subjects taught</label>
@@ -122,7 +157,15 @@ export default function ProfileManager({
           <label>Phone</label>
           <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="555-0100" />
         </div>
+        <div className="form-field">
+          <label htmlFor="tutor-tz">Timezone</label>
+          <TimeZoneSelect id="tutor-tz" value={timeZone} onChange={setTimeZone} />
+        </div>
       </div>
+      <p className="muted small" style={{ marginTop: "-0.5rem" }}>
+        Weekly hours and one-off times are in this timezone. Changing it keeps the same clock times (e.g. still
+        4pm–8pm) in the new zone; existing bookings keep their exact time.
+      </p>
 
       <button onClick={save} disabled={saving}>
         {saving ? "Saving..." : "Save Profile"}
