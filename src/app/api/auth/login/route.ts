@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { LOGIN_EMAILS_PER_HOUR, LOGIN_TOKEN_TTL_MIN, isAdminEmail, newToken, normalizeEmail } from "@/lib/auth";
+import { CONFIG } from "@/config";
 
 const bodySchema = z.object({ email: z.string().trim().email("Enter a valid email.") });
 
@@ -39,11 +40,11 @@ export async function POST(req: NextRequest) {
   const link = `${appUrl}/login/verify?token=${encodeURIComponent(token)}`;
   await sendEmail(
     email,
-    "Your TutorSpot sign-in link",
+    `Your ${CONFIG.SITE_NAME} sign-in link`,
     [
       `Hi${tutor ? ` ${tutor.name}` : ""},`,
       "",
-      `Use this link to sign in to TutorSpot. It works once and expires in ${LOGIN_TOKEN_TTL_MIN} minutes:`,
+      `Use this link to sign in to ${CONFIG.SITE_NAME}. It works once and expires in ${LOGIN_TOKEN_TTL_MIN} minutes:`,
       "",
       link,
       "",

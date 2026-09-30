@@ -3,7 +3,7 @@ import { requireAdminPage } from "@/lib/auth";
 import { colorForTutor } from "@/lib/tutorColor";
 import AdminSchedule from "./AdminSchedule";
 
-export const metadata = { title: "Bookings · Admin · TutorSpot" };
+export const metadata = { title: "Bookings · Admin" };
 
 export default async function AdminBookingsPage() {
   await requireAdminPage();

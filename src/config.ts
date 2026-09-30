@@ -5,6 +5,10 @@
  * when asked "how would you make this configurable?" — you already did it.
  */
 export const CONFIG = {
+  // The site's name, used in page titles, emails and sign-in pages.
+  // "TutorSpot" is a placeholder until a real name is chosen.
+  SITE_NAME: "UCR Tutoring",
+
   // Scheduling granularity
   START_TIME_INCREMENT_MIN: 15,
   SESSION_DURATION_INCREMENT_MIN: 15,

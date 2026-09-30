@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CONFIG } from "@/config";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -37,7 +38,7 @@ export default function LoginForm() {
     return (
       <div className="auth-sent">
         <p>
-          If <strong>{sentTo}</strong> belongs to a TutorSpot tutor, a sign-in link is on its way. It expires in 15
+          If <strong>{sentTo}</strong> belongs to a {CONFIG.SITE_NAME} tutor, a sign-in link is on its way. It expires in 15
           minutes.
         </p>
         {devLink && (

@@ -1,7 +1,7 @@
 import { CONFIG } from "@/config";
 import LookupForm from "./LookupForm";
 
-export const metadata = { title: "My bookings · TutorSpot" };
+export const metadata = { title: "My bookings" };
 
 /** Students ask for an emailed link to see all their bookings. */
 export default function MyBookingsPage({ searchParams }: { searchParams: { expired?: string } }) {

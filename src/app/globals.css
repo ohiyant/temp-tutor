@@ -1789,3 +1789,23 @@ body:has(.fit-calendar) .tab-area {
   color: #2563eb;
   font-size: 0.9rem;
 }
+
+/* A tutor's hours that exist but can't be booked (inside their minimum
+   notice, or too far ahead): faint stripes with the tutor's color on the left. */
+.calendar-block.unbookable {
+  cursor: not-allowed;
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(100, 116, 139, 0.1) 0 6px,
+    rgba(100, 116, 139, 0.2) 6px 12px
+  );
+  border-left: 3px solid;
+  border-radius: 3px;
+  color: #475569;
+  font-size: 0.65rem;
+  font-style: italic;
+}
+
+.legend-swatch.legend-unbookable {
+  background: repeating-linear-gradient(135deg, #e2e8f0 0 3px, #cbd5e1 3px 6px);
+}

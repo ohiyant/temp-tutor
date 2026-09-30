@@ -7,6 +7,7 @@
 import { sendEmail } from "@/lib/email";
 import { appUrl, cancelPath, reschedulePath } from "@/lib/manageLinks";
 import { formatDateTime, isValidTimeZone } from "@/lib/timezone";
+import { CONFIG } from "../config";
 
 export interface SessionForEmail {
   startAt: Date;
@@ -58,13 +59,13 @@ export async function sendCancellationEmails(
         `Hi ${s.studentName},`,
         "",
         studentLead,
-        ...(reason ? ["", `Message from ${cancelledBy === "tutor" ? s.tutor.name : "TutorSpot"}:`, reason] : []),
+        ...(reason ? ["", `Message from ${cancelledBy === "tutor" ? s.tutor.name : CONFIG.SITE_NAME}:`, reason] : []),
         ...(refundNote ? ["", refundNote] : []),
         "",
         cancelledBy === "student"
           ? "You're welcome to book again any time."
           : "Sorry for the inconvenience. You're welcome to book another time.",
-        "TutorSpot",
+        CONFIG.SITE_NAME,
       ].join("\n")
     ),
     sendEmail(
@@ -100,7 +101,7 @@ export async function sendRescheduleEmails(oldStartAt: Date, s: SessionForEmail,
         "Need to change it again?",
         ...manageLinksText(s),
         "",
-        "TutorSpot",
+        CONFIG.SITE_NAME,
       ].join("\n")
     ),
     sendEmail(

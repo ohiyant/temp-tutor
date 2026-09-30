@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getFreeRanges, computeBufferPadding, type BusyRange } from "@/lib/availability";
+import { getAvailabilityRanges, getFreeRanges, computeBufferPadding, type BusyRange } from "@/lib/availability";
 import { addDays, isValidTimeZone, startOfDay } from "@/lib/timezone";
 import { CONFIG } from "@/config";
 import { colorForTutor } from "@/lib/tutorColor";
@@ -128,6 +128,26 @@ async function buildCalendarResponse(parsed: z.infer<typeof querySchema>) {
       startIncrementMin: CONFIG.START_TIME_INCREMENT_MIN,
     });
 
+    // The tutor's hours that exist but can't be booked yet or any more:
+    // before the minimum-notice cutoff ("too soon"), or past how far ahead
+    // they take bookings ("too far"). The calendar shades these so a gap
+    // in someone's usual hours doesn't look like they're simply unavailable.
+    const rawHours = getAvailabilityRanges({
+      rangeStart,
+      rangeEnd,
+      recurringBlocks: tutor.availabilityBlocks,
+      exceptions: tutor.availabilityExceptions,
+      timeZone: tutor.timeZone,
+    }).flatMap((d) => d.ranges);
+    const clipTo = (from: Date, to: Date) =>
+      rawHours
+        .map((r) => ({ start: new Date(Math.max(r.start.getTime(), from.getTime())), end: new Date(Math.min(r.end.getTime(), to.getTime())) }))
+        .filter((r) => r.end > r.start);
+    const unbookable = [
+      ...clipTo(rangeStart, earliestAllowedStart).map((r) => ({ ...toIso(r), reason: "too_soon" as const })),
+      ...clipTo(latestAllowedStart, rangeEnd).map((r) => ({ ...toIso(r), reason: "too_far" as const })),
+    ];
+
     const bufferPadding = computeBufferPadding(
       sessionsForTutor.map((s) => ({ start: s.startAt, end: s.endAt, mode: s.mode })),
       bufferMin
@@ -143,6 +163,8 @@ async function buildCalendarResponse(parsed: z.infer<typeof querySchema>) {
       inPersonAvailable: tutor.inPersonAvailable,
       earliestAllowedStart: earliestAllowedStart.toISOString(),
       latestAllowedStart: latestAllowedStart.toISOString(),
+      minBookingNoticeHours: tutor.minBookingNoticeHours,
+      maxBookingWindowDays: Math.round(tutor.maxBookingWindowHours / 24),
       free: freeDays.flatMap((d) => d.ranges).map(toIso),
       busy: [
         ...sessionsForTutor.map((s) => ({ start: s.startAt, end: s.endAt, kind: "session" as const })),
@@ -151,6 +173,7 @@ async function buildCalendarResponse(parsed: z.infer<typeof querySchema>) {
         .filter(inRange)
         .map((r) => ({ ...toIso(r), kind: r.kind })),
       buffer: bufferPadding.filter(inRange).map(toIso),
+      unbookable,
     };
   });
 

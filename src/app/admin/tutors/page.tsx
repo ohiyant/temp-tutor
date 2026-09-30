@@ -4,7 +4,7 @@ import { colorForTutor } from "@/lib/tutorColor";
 import { timeZoneOptionLabel } from "@/lib/timezone";
 import TutorCards from "./TutorCards";
 
-export const metadata = { title: "Tutors · Admin · TutorSpot" };
+export const metadata = { title: "Tutors · Admin" };
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 

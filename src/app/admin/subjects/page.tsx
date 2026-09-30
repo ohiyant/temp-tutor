@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminPage } from "@/lib/auth";
 import { SubjectsManager } from "../AdminForms";
 
-export const metadata = { title: "Subjects · Admin · TutorSpot" };
+export const metadata = { title: "Subjects · Admin" };
 
 export default async function AdminSubjectsPage() {
   await requireAdminPage();

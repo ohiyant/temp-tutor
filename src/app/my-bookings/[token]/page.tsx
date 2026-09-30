@@ -6,7 +6,7 @@ import { cancelPath, reschedulePath } from "@/lib/manageLinks";
 import { formatDateTime, isValidTimeZone } from "@/lib/timezone";
 import { ManageShell } from "@/components/ManageSession";
 
-export const metadata = { title: "My bookings · TutorSpot" };
+export const metadata = { title: "My bookings" };
 
 const STATUS_LABELS: Record<string, string> = {
   completed: "Completed",

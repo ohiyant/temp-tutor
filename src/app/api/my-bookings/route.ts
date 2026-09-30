@@ -46,11 +46,11 @@ export async function POST(req: NextRequest) {
   const link = `${appUrl()}/my-bookings/${token}`;
   await sendEmail(
     email,
-    "Your TutorSpot bookings",
+    `Your ${CONFIG.SITE_NAME} bookings`,
     [
       "Hi,",
       "",
-      `Here's a link to see all your TutorSpot sessions, and reschedule or cancel upcoming ones. It works for ${CONFIG.BOOKING_LOOKUP_LINK_HOURS} hours:`,
+      `Here's a link to see all your ${CONFIG.SITE_NAME} sessions, and reschedule or cancel upcoming ones. It works for ${CONFIG.BOOKING_LOOKUP_LINK_HOURS} hours:`,
       "",
       link,
       "",

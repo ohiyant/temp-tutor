@@ -259,7 +259,7 @@ async function sendConfirmationEmails(
     `See all your bookings any time at ${appUrl()}/my-bookings`,
     "",
     "See you then!",
-    "TutorSpot",
+    CONFIG.SITE_NAME,
   ].join("\n");
 
   const emails = [sendEmail(input.studentEmail, `Booking confirmed: ${created.subjectName}`, studentText)];

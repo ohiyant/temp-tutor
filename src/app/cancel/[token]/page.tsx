@@ -7,7 +7,7 @@ import { formatDateTime, isValidTimeZone } from "@/lib/timezone";
 import { ManageShell, SessionSummary } from "@/components/ManageSession";
 import CancelForm from "./CancelForm";
 
-export const metadata = { title: "Cancel a session · TutorSpot" };
+export const metadata = { title: "Cancel a session" };
 
 /** Public page behind the cancel link in a student's confirmation email. */
 export default async function CancelPage({ params }: { params: { token: string } }) {

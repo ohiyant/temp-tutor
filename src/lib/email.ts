@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { Resend } from "resend";
+import { CONFIG } from "../config";
 
 /**
  * Best-effort email sending. A failed email must never fail a booking —
@@ -27,8 +28,8 @@ const resend = !gmail && process.env.RESEND_API_KEY ? new Resend(process.env.RES
 
 // Gmail always sends as the signed-in account, so only the display name is ours to choose there.
 const FROM = gmail
-  ? `TutorSpot <${gmailUser}>`
-  : process.env.EMAIL_FROM ?? "TutorSpot <onboarding@resend.dev>";
+  ? `${CONFIG.SITE_NAME} <${gmailUser}>`
+  : process.env.EMAIL_FROM ?? `${CONFIG.SITE_NAME} <onboarding@resend.dev>`;
 
 export async function sendEmail(to: string, subject: string, text: string): Promise<void> {
   try {

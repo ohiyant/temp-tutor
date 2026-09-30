@@ -82,6 +82,11 @@ interface CalendarTutor {
   free: RangeIso[];
   busy: BusyRangeIso[];
   buffer: RangeIso[];
+  // The tutor's hours that can't be booked: inside their minimum notice, or
+  // further ahead than they take bookings. Shaded so they don't look empty.
+  unbookable: (RangeIso & { reason: "too_soon" | "too_far" })[];
+  minBookingNoticeHours: number;
+  maxBookingWindowDays: number;
 }
 
 interface CalendarResponse {
@@ -689,6 +694,9 @@ export default function BookingCalendar() {
               <span>
                 <span className="legend-swatch" style={{ background: "repeating-linear-gradient(45deg,#ccc,#ccc 3px,#eee 3px,#eee 6px)" }} /> Travel buffer
               </span>
+              <span>
+                <span className="legend-swatch legend-unbookable" /> Too soon to book
+              </span>
             </div>
           </div>
 
@@ -732,6 +740,35 @@ export default function BookingCalendar() {
                       const seg = (r: RangeIso) => daySegment(r, date, timeZone, pxPerMin);
                       return (
                         <div key={tutor.tutorId}>
+                          {tutor.unbookable.map((u, i) => {
+                            const sg = seg(u);
+                            if (!sg) return null;
+                            const why =
+                              u.reason === "too_soon"
+                                ? `Needs ${tutor.minBookingNoticeHours}h notice`
+                                : "Not bookable yet";
+                            return (
+                              <div
+                                key={`unbookable-${i}`}
+                                className="calendar-block unbookable"
+                                style={{
+                                  top: sg.top,
+                                  height: sg.height,
+                                  left,
+                                  width,
+                                  zIndex: tIdx,
+                                  borderLeftColor: tutor.color,
+                                }}
+                                title={
+                                  u.reason === "too_soon"
+                                    ? `${tutor.tutorName} needs ${tutor.minBookingNoticeHours} hours' notice, so this time is too soon to book.`
+                                    : `${tutor.tutorName} takes bookings up to ${tutor.maxBookingWindowDays} days ahead, so this time can't be booked yet.`
+                                }
+                              >
+                                {sg.height >= 28 ? why : ""}
+                              </div>
+                            );
+                          })}
                           {tutor.busy.map((b, i) => {
                             const sg = seg(b);
                             if (!sg) return null;

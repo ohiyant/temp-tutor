@@ -1,4 +1,5 @@
-export const metadata = { title: "Sign in · TutorSpot" };
+import { CONFIG } from "@/config";
+export const metadata = { title: "Sign in" };
 
 /**
  * Landing page for the emailed link. Signing in takes a button press (a
@@ -9,7 +10,7 @@ export default function VerifyPage({ searchParams }: { searchParams: { token?: s
   return (
     <div className="container auth-container">
       <div className="card auth-card">
-        <h1>Sign in to TutorSpot</h1>
+        <h1>Sign in to {CONFIG.SITE_NAME}</h1>
         {searchParams.token ? (
           <form method="post" action="/api/auth/verify" className="auth-form">
             <input type="hidden" name="token" value={searchParams.token} />

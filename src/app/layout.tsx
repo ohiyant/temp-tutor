@@ -1,9 +1,11 @@
 import "./globals.css";
 import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/auth";
+import { CONFIG } from "@/config";
 
 export const metadata = {
-  title: "Tutoring Platform",
+  // Pages set just their own part ("My bookings"); the site name is added here.
+  title: { default: CONFIG.SITE_NAME, template: `%s · ${CONFIG.SITE_NAME}` },
   description: "Book a tutor online or in person.",
 };
 

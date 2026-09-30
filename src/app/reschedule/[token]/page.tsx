@@ -7,7 +7,7 @@ import { formatDateTime, isValidTimeZone } from "@/lib/timezone";
 import { ManageShell, SessionSummary } from "@/components/ManageSession";
 import RescheduleForm from "./RescheduleForm";
 
-export const metadata = { title: "Reschedule a session · TutorSpot" };
+export const metadata = { title: "Reschedule a session" };
 
 /** Public page behind the reschedule link in a student's confirmation email. */
 export default async function ReschedulePage({ params }: { params: { token: string } }) {

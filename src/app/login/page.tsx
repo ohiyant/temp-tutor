@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import LoginForm from "./LoginForm";
 
-export const metadata = { title: "Sign in · TutorSpot" };
+export const metadata = { title: "Sign in" };
 
 export default async function LoginPage({
   searchParams,
