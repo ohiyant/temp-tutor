@@ -83,7 +83,7 @@ export async function sendCancellationEmails(
   ]);
 }
 
-export async function sendRescheduleEmails(oldStartAt: Date, s: SessionForEmail, feeNote?: string): Promise<void> {
+export async function sendRescheduleEmails(oldStartAt: Date, s: SessionForEmail): Promise<void> {
   const zone = studentZone(s);
   await Promise.all([
     sendEmail(
@@ -96,7 +96,6 @@ export async function sendRescheduleEmails(oldStartAt: Date, s: SessionForEmail,
         "",
         `  From: ${formatDateTime(oldStartAt, zone)}`,
         `  To:   ${formatDateTime(s.startAt, zone)} (${s.durationMin} min)`,
-        ...(feeNote ? ["", feeNote] : []),
         "",
         "Need to change it again?",
         ...manageLinksText(s),

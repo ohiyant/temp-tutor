@@ -6,11 +6,12 @@ import RemoveTutor from "./RemoveTutor";
 import { colorForTutor } from "@/lib/tutorColor";
 
 /** Rate & subjects tab: rate, session types, subjects, contact and timezone. */
-export default async function ProfilePage({
-  params,
-}: {
-  params: { tutorId: string };
-}) {
+export default async function ProfilePage(
+  props: {
+    params: Promise<{ tutorId: string }>;
+  }
+) {
+  const params = await props.params;
   const user = await requireTutorPage(params.tutorId);
 
   const tutor = await prisma.tutor.findUnique({

@@ -8,6 +8,8 @@ import type { BusyRange } from "@/lib/availability";
 import { formatDateTime, isValidTimeZone } from "@/lib/timezone";
 import { appUrl, cancelPath, newManageToken, reschedulePath } from "@/lib/manageLinks";
 import { manageLinksText } from "@/lib/sessionEmails";
+import { DAY_MS as ONE_DAY_MS, HOUR_MS, clientIp, rateLimit } from "@/lib/rateLimit";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 /**
  * POST /api/bookings — book one or more sessions for a guest student.
@@ -15,6 +17,11 @@ import { manageLinksText } from "@/lib/sessionEmails";
  * Every requested session is re-validated against fresh data inside a
  * transaction that holds a Postgres advisory lock per tutor (and per
  * student email), so two students racing for the same slot can't both win.
+ *
+ * Spam protection, before any of that: a hidden honeypot field bots fill in,
+ * Cloudflare Turnstile (when configured), per-IP and per-email rate limits,
+ * a cap on sessions per booking and on a student's upcoming sessions. The
+ * student must also agree to the policies.
  *
  * PAYMENT: not wired up yet. Sessions are created as `confirmed` straight
  * away. When Stripe is added, this should instead create `pending_payment`
@@ -40,7 +47,12 @@ const bodySchema = z.object({
       })
     )
     .min(1, "Pick at least one session.")
-    .max(20),
+    .max(CONFIG.MAX_SESSIONS_PER_BOOKING, `You can book up to ${CONFIG.MAX_SESSIONS_PER_BOOKING} sessions at a time.`),
+  acceptedPolicies: z.literal(true, { errorMap: () => ({ message: "Please agree to the policies to book." }) }),
+  /** Honeypot: a field people never see; anything in it means a bot filled the form. */
+  website: z.string().optional(),
+  /** From the Cloudflare Turnstile widget, when it's switched on. */
+  turnstileToken: z.string().optional(),
 });
 
 /** Thrown inside the transaction for anything the student can fix by picking again. */
@@ -54,6 +66,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid booking" }, { status: 400 });
   }
   const input = parsed.data;
+  const ip = clientIp(req);
+
+  if (input.website) {
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 400 });
+  }
+  if (!(await verifyTurnstile(input.turnstileToken, ip))) {
+    return NextResponse.json({ error: "Please complete the \"I'm human\" check and try again." }, { status: 400 });
+  }
+  if (!(await rateLimit(`book:ip:${ip}`, CONFIG.BOOKINGS_PER_IP_PER_HOUR, HOUR_MS))) {
+    return NextResponse.json({ error: "Too many bookings from here. Please try again in an hour." }, { status: 429 });
+  }
+  if (!(await rateLimit(`book:email:${input.studentEmail}`, CONFIG.BOOKINGS_PER_EMAIL_PER_DAY, ONE_DAY_MS))) {
+    return NextResponse.json(
+      { error: "Too many bookings for this email today. Please try again tomorrow." },
+      { status: 429 }
+    );
+  }
 
   const requested = input.sessions
     .map((s) => {
@@ -87,6 +116,20 @@ export async function POST(req: NextRequest) {
         const windowStart = new Date(requested[0].start.getTime() - DAY_MS);
         const windowEnd = new Date(Math.max(...requested.map((s) => s.end.getTime())) + DAY_MS);
         const now = new Date();
+
+        const upcomingForStudent = await tx.session.count({
+          where: {
+            studentEmail: { equals: input.studentEmail, mode: "insensitive" },
+            status: "confirmed",
+            endAt: { gt: now },
+          },
+        });
+        if (upcomingForStudent + requested.length > CONFIG.MAX_UPCOMING_SESSIONS_PER_STUDENT) {
+          throw new BookingConflict(
+            `You can have up to ${CONFIG.MAX_UPCOMING_SESSIONS_PER_STUDENT} upcoming sessions at once` +
+              (upcomingForStudent ? ` (you have ${upcomingForStudent}).` : ".")
+          );
+        }
 
         const [existingSessions, activeHolds, studentSessions] = await Promise.all([
           tx.session.findMany({
@@ -176,6 +219,7 @@ export async function POST(req: NextRequest) {
               durationMin: a.durationMin,
               priceCents: a.priceCents,
               status: "confirmed", // TODO(payment): pending_payment until Stripe confirms
+              policiesAcceptedAt: now,
               cancellationToken: newManageToken(),
               rescheduleToken: newManageToken(),
             },

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { CONFIG } from "@/config";
-import { canReschedule, rescheduleFeeCents } from "@/lib/policy";
+import { canReschedule } from "@/lib/policy";
 import { cancelPath } from "@/lib/manageLinks";
 import { formatDateTime, isValidTimeZone } from "@/lib/timezone";
 import { ManageShell, SessionSummary } from "@/components/ManageSession";
@@ -10,7 +10,8 @@ import RescheduleForm from "./RescheduleForm";
 export const metadata = { title: "Reschedule a session" };
 
 /** Public page behind the reschedule link in a student's confirmation email. */
-export default async function ReschedulePage({ params }: { params: { token: string } }) {
+export default async function ReschedulePage(props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const session = await prisma.session.findUnique({
     where: { rescheduleToken: params.token },
     include: { tutor: true, subject: true },
@@ -61,7 +62,6 @@ export default async function ReschedulePage({ params }: { params: { token: stri
     );
   }
 
-  const fee = (rescheduleFeeCents(session.priceCents) / 100).toFixed(2);
   return (
     <ManageShell title="Reschedule your session">
       <SessionSummary
@@ -72,8 +72,7 @@ export default async function ReschedulePage({ params }: { params: { token: stri
         mode={session.mode}
       />
       <p className="manage-policy">
-        Pick a new time with {session.tutor.name} below. Rescheduling has a {Math.round(CONFIG.RESCHEDULE_FEE_PCT * 100)}%
-        fee (${fee}), but online payment isn&apos;t set up yet, so you won&apos;t be charged.
+        Pick a new time with {session.tutor.name} below. Rescheduling is free.
       </p>
       <RescheduleForm
         token={session.rescheduleToken}

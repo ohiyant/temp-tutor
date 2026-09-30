@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/email";
 import { LOGIN_EMAILS_PER_HOUR, LOGIN_TOKEN_TTL_MIN, isAdminEmail, newToken, normalizeEmail } from "@/lib/auth";
 import { CONFIG } from "@/config";
 import { appUrl } from "@/lib/manageLinks";
+import { HOUR_MS, clientIp, rateLimit } from "@/lib/rateLimit";
 
 const bodySchema = z.object({ email: z.string().trim().email("Enter a valid email.") });
 
@@ -21,6 +22,10 @@ export async function POST(req: NextRequest) {
   }
   const email = normalizeEmail(parsed.data.email);
   const response: { ok: true; devLink?: string } = { ok: true };
+
+  if (!(await rateLimit(`signin:ip:${clientIp(req)}`, CONFIG.SIGN_IN_EMAILS_PER_IP_PER_HOUR, HOUR_MS))) {
+    return NextResponse.json({ error: "Too many sign-in requests. Try again in an hour." }, { status: 429 });
+  }
 
   const tutor = await prisma.tutor.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
   if (!tutor && !isAdminEmail(email)) return NextResponse.json(response);

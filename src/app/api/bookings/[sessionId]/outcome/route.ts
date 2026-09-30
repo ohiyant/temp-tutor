@@ -12,7 +12,8 @@ const bodySchema = z.object({
  * POST /api/bookings/[sessionId]/outcome — the session's tutor, or an admin,
  * marks a session that has started as completed or a no-show (or undoes it).
  */
-export async function POST(req: NextRequest, { params }: { params: { sessionId: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ sessionId: string }> }) {
+  const params = await props.params;
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
 

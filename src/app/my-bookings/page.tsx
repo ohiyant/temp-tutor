@@ -4,7 +4,8 @@ import LookupForm from "./LookupForm";
 export const metadata = { title: "My bookings" };
 
 /** Students ask for an emailed link to see all their bookings. */
-export default function MyBookingsPage({ searchParams }: { searchParams: { expired?: string } }) {
+export default async function MyBookingsPage(props: { searchParams: Promise<{ expired?: string }> }) {
+  const searchParams = await props.searchParams;
   return (
     <div className="container auth-container">
       <div className="card auth-card">

@@ -10,7 +10,13 @@ import TabNav from "@/components/TabNav";
  * pages. Seen by that tutor, or by an admin managing them. Each page checks
  * access itself too.
  */
-export default async function TutorLayout({ children, params }: { children: ReactNode; params: { tutorId: string } }) {
+export default async function TutorLayout(props: { children: ReactNode; params: Promise<{ tutorId: string }> }) {
+  const params = await props.params;
+
+  const {
+    children
+  } = props;
+
   const user = await requireTutorPage(params.tutorId);
   const tutor = await prisma.tutor.findUnique({ where: { id: params.tutorId }, select: { id: true, name: true } });
   if (!tutor) notFound();

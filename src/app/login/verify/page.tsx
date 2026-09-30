@@ -6,7 +6,8 @@ export const metadata = { title: "Sign in" };
  * POST) rather than happening on page load, because email security
  * scanners open links automatically and would use up the one-time token.
  */
-export default function VerifyPage({ searchParams }: { searchParams: { token?: string } }) {
+export default async function VerifyPage(props: { searchParams: Promise<{ token?: string }> }) {
+  const searchParams = await props.searchParams;
   return (
     <div className="container auth-container">
       <div className="card auth-card">

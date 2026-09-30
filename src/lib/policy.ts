@@ -23,7 +23,3 @@ export function cancellationRefundPct(startAt: Date, now: Date): number {
 export function canReschedule(startAt: Date, now: Date): boolean {
   return hoursUntil(startAt, now) > CONFIG.RESCHEDULE_MIN_NOTICE_HOURS;
 }
-
-export function rescheduleFeeCents(priceCents: number): number {
-  return Math.round(priceCents * CONFIG.RESCHEDULE_FEE_PCT);
-}

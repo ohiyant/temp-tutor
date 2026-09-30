@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/email";
 import { newToken, normalizeEmail } from "@/lib/auth";
 import { appUrl } from "@/lib/manageLinks";
 import { CONFIG } from "@/config";
+import { HOUR_MS, clientIp, rateLimit } from "@/lib/rateLimit";
 
 const LOOKUP_EMAILS_PER_HOUR = 5;
 
@@ -24,6 +25,10 @@ export async function POST(req: NextRequest) {
   }
   const email = normalizeEmail(parsed.data.email);
   const response: { ok: true; devLink?: string } = { ok: true };
+
+  if (!(await rateLimit(`lookup:ip:${clientIp(req)}`, CONFIG.LOOKUP_EMAILS_PER_IP_PER_HOUR, HOUR_MS))) {
+    return NextResponse.json({ error: "Too many requests. Try again in an hour." }, { status: 429 });
+  }
 
   const hasBookings = await prisma.session.findFirst({
     where: { studentEmail: { equals: email, mode: "insensitive" }, status: { not: "rescheduled" } },

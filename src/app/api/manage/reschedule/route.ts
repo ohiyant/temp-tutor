@@ -28,8 +28,7 @@ class RescheduleProblem extends Error {
  * same per-tutor and per-student locks as a new booking, so it can't race
  * one into a double booking.
  *
- * PAYMENT: the reschedule fee isn't charged yet. When Stripe is added,
- * charge rescheduleFeeCents(price) before confirming the move.
+ * Rescheduling is free: the session keeps its price and any payment.
  */
 export async function POST(req: NextRequest) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));

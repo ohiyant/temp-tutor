@@ -5,7 +5,8 @@ import AvailabilityManager from "./AvailabilityManager";
 import { zoneLabel } from "@/lib/calendarUi";
 
 /** Availability tab: weekly hours, one-off changes and booking rules. */
-export default async function AvailabilityPage({ params }: { params: { tutorId: string } }) {
+export default async function AvailabilityPage(props: { params: Promise<{ tutorId: string }> }) {
+  const params = await props.params;
   await requireTutorPage(params.tutorId);
 
   const tutor = await prisma.tutor.findUnique({ where: { id: params.tutorId } });

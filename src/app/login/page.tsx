@@ -4,11 +4,12 @@ import LoginForm from "./LoginForm";
 
 export const metadata = { title: "Sign in" };
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: { error?: string; signedOut?: string };
-}) {
+export default async function LoginPage(
+  props: {
+    searchParams: Promise<{ error?: string; signedOut?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   if (await getCurrentUser()) redirect("/dashboard");
 
   return (

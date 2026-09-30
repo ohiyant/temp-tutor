@@ -19,7 +19,6 @@ export const CONFIG = {
   DEFAULT_SESSION_LENGTH_MIN: 60,
 
   // Rescheduling
-  RESCHEDULE_FEE_PCT: 0.25,
   RESCHEDULE_MIN_NOTICE_HOURS: 48,
   // Spacing of the start times offered on the reschedule page.
   RESCHEDULE_SLOT_INCREMENT_MIN: 15,
@@ -50,6 +49,14 @@ export const CONFIG = {
 
   // How long an emailed "My bookings" link keeps working.
   BOOKING_LOOKUP_LINK_HOURS: 24,
+
+  // Spam protection (see src/lib/rateLimit.ts)
+  MAX_SESSIONS_PER_BOOKING: 5,
+  MAX_UPCOMING_SESSIONS_PER_STUDENT: 10,
+  BOOKINGS_PER_IP_PER_HOUR: 5,
+  BOOKINGS_PER_EMAIL_PER_DAY: 5,
+  SIGN_IN_EMAILS_PER_IP_PER_HOUR: 10,
+  LOOKUP_EMAILS_PER_IP_PER_HOUR: 10,
 
   // Guest form
   DESCRIPTION_MAX_CHARS: 1000,

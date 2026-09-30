@@ -7,7 +7,7 @@ import { colorForTutor } from "@/lib/tutorColor";
 import TutorAvatar from "@/components/TutorAvatar";
 import HeroShine from "./HeroShine";
 
-/** Welcome page: what the site is, how booking works, and who the tutors are. */
+/** Welcome page: what the site is, and who the tutors are. */
 export default async function HomePage() {
   // A signed-in tutor goes to their own schedule instead of the student landing page.
   const user = await getCurrentUser();
@@ -35,22 +35,6 @@ export default async function HomePage() {
           </Link>
         </div>
       </HeroShine>
-
-      <section className="welcome-steps" aria-label="How booking works">
-        {[
-          ["Pick a subject", "See every tutor's open times on one calendar, in your timezone."],
-          ["Choose a time", "Click a free slot. Book one session or several at once."],
-          ["You're booked", "You'll get a confirmation email with links to reschedule or cancel."],
-        ].map(([title, text], i) => (
-          <div key={title} className="welcome-step">
-            <span className="welcome-step-num">{i + 1}</span>
-            <div>
-              <h2>{title}</h2>
-              <p>{text}</p>
-            </div>
-          </div>
-        ))}
-      </section>
 
       {tutors.length > 0 && (
         <section className="welcome-tutors">

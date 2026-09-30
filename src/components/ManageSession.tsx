@@ -8,6 +8,9 @@ export function ManageShell({ title, children }: { title: string; children: Reac
         <h1>{title}</h1>
         {children}
       </div>
+      <p className="manage-policies-link">
+        <a href="/policies">Cancellation and rescheduling policies</a>
+      </p>
     </div>
   );
 }

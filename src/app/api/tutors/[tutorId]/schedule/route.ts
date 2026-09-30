@@ -22,7 +22,8 @@ const querySchema = z.object({
  * `start` is a date in the TUTOR's timezone (returned as `timeZone`); all
  * ranges are real UTC instants, for the client to lay out in that zone.
  */
-export async function GET(req: NextRequest, { params }: { params: { tutorId: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ tutorId: string }> }) {
+  const params = await props.params;
   const auth = await requireTutorApi(params.tutorId);
   if (auth instanceof NextResponse) return auth;
 

@@ -60,7 +60,7 @@ export function hashToken(token: string): string {
 
 /** The signed-in user for this request, or null. */
 export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
   const session = await prisma.authSession.findUnique({ where: { tokenHash: hashToken(token) } });

@@ -19,7 +19,8 @@ const bodySchema = z.object({
  * PAYMENT: no refund is issued yet — payments aren't built. When Stripe is
  * added, refund in full here (the student didn't choose to cancel).
  */
-export async function POST(req: NextRequest, { params }: { params: { sessionId: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ sessionId: string }> }) {
+  const params = await props.params;
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
 

@@ -47,6 +47,7 @@ import {
 } from "@/lib/calendarUi";
 import { useFitCalendar } from "@/components/useFitCalendar";
 import CalendarViewSwitch, { type CalendarView } from "@/components/CalendarViewSwitch";
+import TurnstileWidget, { turnstileOn } from "@/components/TurnstileWidget";
 import MonthGrid, { type MonthItem } from "@/components/MonthGrid";
 import { localTimeZone } from "@/lib/timezone";
 import TimeZoneSelect from "@/components/TimeZoneSelect";
@@ -261,6 +262,12 @@ export default function BookingCalendar() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [description, setDescription] = useState("");
+  // Honeypot: hidden from people, so only bots fill it in.
+  const [website, setWebsite] = useState("");
+  const [agreed, setAgreed] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  // Each Turnstile pass works once; bumping this re-mounts the widget for a fresh one.
+  const [turnstileKey, setTurnstileKey] = useState(0);
   const [detailsError, setDetailsError] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
@@ -476,6 +483,10 @@ export default function BookingCalendar() {
   }
 
   function addSelection(d: DragState) {
+    if (selections.length >= CONFIG.MAX_SESSIONS_PER_BOOKING) {
+      setError(`You can book up to ${CONFIG.MAX_SESSIONS_PER_BOOKING} sessions at a time.`);
+      return;
+    }
     const defaultMode: SessionMode =
       filterMode !== "both" ? filterMode : d.tutor.onlineAvailable ? "online" : "in_person";
     const startAt = d.startAt.toISOString();
@@ -530,6 +541,9 @@ export default function BookingCalendar() {
           studentPhone: phone || null,
           description,
           timeZone,
+          acceptedPolicies: agreed,
+          website,
+          turnstileToken: turnstileToken ?? undefined,
           sessions: selections.map((s) => ({
             tutorId: s.tutorId,
             startAt: s.startAt,
@@ -540,6 +554,9 @@ export default function BookingCalendar() {
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
+        // The bot-check pass was used up by this attempt; get a fresh one for a retry.
+        setTurnstileToken(null);
+        setTurnstileKey((k) => k + 1);
         setBookingError(body?.error ?? "Something went wrong saving your booking. Please try again.");
         // Availability changed under us — make sure the calendar is fresh when they go back.
         if (res.status === 409) setReloadKey((k) => k + 1);
@@ -1000,6 +1017,17 @@ export default function BookingCalendar() {
               style={{ padding: "0.5rem", border: "1px solid #ccc", borderRadius: "4px", fontFamily: "inherit" }}
             />
           </div>
+          {/* Honeypot: off-screen and skipped by keyboard and screen readers; bots fill every field. */}
+          <div className="honeypot" aria-hidden="true">
+            <label htmlFor="booking-website">Website</label>
+            <input
+              id="booking-website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
+          </div>
           <div className="form-row">
             <button onClick={goToReview}>Review Booking</button>
             <button onClick={() => setStep("calendar")} style={{ background: "#e5e5e5", color: "#333" }}>
@@ -1042,14 +1070,30 @@ export default function BookingCalendar() {
               or less before, {CONFIG.CANCEL_REFUND_PCT_LTE_24H * 100}% refund.
             </p>
             <p>
-              <strong>Rescheduling policy:</strong> allowed only more than {CONFIG.RESCHEDULE_MIN_NOTICE_HOURS} hours
-              before your session, for a {CONFIG.RESCHEDULE_FEE_PCT * 100}% fee.
+              <strong>Rescheduling policy:</strong> free, up to {CONFIG.RESCHEDULE_MIN_NOTICE_HOURS} hours before your
+              session.
             </p>
           </div>
 
+          <label className="checkbox-row policy-agree">
+            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+            <span>
+              I agree to the{" "}
+              <a href="/policies" target="_blank" rel="noopener">
+                cancellation and rescheduling policies
+              </a>
+              .
+            </span>
+          </label>
+          <TurnstileWidget key={turnstileKey} onToken={setTurnstileToken} />
+
           {bookingError && <p className="error-text">{bookingError}</p>}
           <div className="form-row" style={{ marginTop: "1.5rem" }}>
-            <button onClick={confirmBooking} disabled={submitting}>
+            <button
+              onClick={confirmBooking}
+              disabled={submitting || !agreed || (turnstileOn && !turnstileToken)}
+              title={!agreed ? "Agree to the policies first" : undefined}
+            >
               {submitting ? "Booking…" : "Confirm booking"}
             </button>
             <button

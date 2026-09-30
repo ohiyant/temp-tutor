@@ -59,6 +59,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           </nav>
         </header>
         <main>{children}</main>
+        <footer className="site-footer">
+          <span>{CONFIG.SITE_NAME}</span>
+          <a href="/policies">Policies</a>
+          <a href="/my-bookings">My bookings</a>
+        </footer>
       </body>
     </html>
   );

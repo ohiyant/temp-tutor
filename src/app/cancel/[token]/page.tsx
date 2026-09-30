@@ -10,7 +10,8 @@ import CancelForm from "./CancelForm";
 export const metadata = { title: "Cancel a session" };
 
 /** Public page behind the cancel link in a student's confirmation email. */
-export default async function CancelPage({ params }: { params: { token: string } }) {
+export default async function CancelPage(props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const session = await prisma.session.findUnique({
     where: { cancellationToken: params.token },
     include: { tutor: true, subject: true },

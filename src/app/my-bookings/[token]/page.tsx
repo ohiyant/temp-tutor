@@ -19,7 +19,8 @@ const STATUS_LABELS: Record<string, string> = {
  * Everything booked with one email address, opened from the link emailed by
  * /my-bookings. Upcoming sessions get Reschedule and Cancel.
  */
-export default async function MyBookingsListPage({ params }: { params: { token: string } }) {
+export default async function MyBookingsListPage(props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const lookup = await prisma.bookingLookupToken.findUnique({ where: { tokenHash: hashToken(params.token) } });
   if (!lookup || lookup.expiresAt <= new Date()) {
     return (

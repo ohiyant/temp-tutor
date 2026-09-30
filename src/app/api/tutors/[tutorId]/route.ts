@@ -28,7 +28,8 @@ const patchSchema = z.object({
   bio: z.string().trim().max(500, "Keep the bio under 500 characters.").nullable().optional(),
 });
 
-export async function GET(_req: NextRequest, { params }: { params: { tutorId: string } }) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ tutorId: string }> }) {
+  const params = await props.params;
   const auth = await requireTutorApi(params.tutorId);
   if (auth instanceof NextResponse) return auth;
 
@@ -40,7 +41,8 @@ export async function GET(_req: NextRequest, { params }: { params: { tutorId: st
   return NextResponse.json(tutor);
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { tutorId: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ tutorId: string }> }) {
+  const params = await props.params;
   const auth = await requireTutorApi(params.tutorId);
   if (auth instanceof NextResponse) return auth;
 
@@ -89,7 +91,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { tutorId: s
  * Students with upcoming bookings are not emailed; do that separately
  * before removing a tutor who still has sessions coming up.
  */
-export async function DELETE(_req: NextRequest, { params }: { params: { tutorId: string } }) {
+export async function DELETE(_req: NextRequest, props: { params: Promise<{ tutorId: string }> }) {
+  const params = await props.params;
   const auth = await requireAdminApi();
   if (auth instanceof NextResponse) return auth;
 

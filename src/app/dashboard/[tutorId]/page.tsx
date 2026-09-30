@@ -5,7 +5,8 @@ import { colorForTutor } from "@/lib/tutorColor";
 import TutorSchedule from "@/components/TutorSchedule";
 
 /** Schedule tab: the tutor's week calendar. */
-export default async function TutorSchedulePage({ params }: { params: { tutorId: string } }) {
+export default async function TutorSchedulePage(props: { params: Promise<{ tutorId: string }> }) {
+  const params = await props.params;
   await requireTutorPage(params.tutorId);
   const tutor = await prisma.tutor.findUnique({ where: { id: params.tutorId }, select: { id: true, timeZone: true } });
   if (!tutor) notFound();

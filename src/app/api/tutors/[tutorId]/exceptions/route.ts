@@ -17,7 +17,8 @@ const createSchema = z
     path: ["endTime"],
   });
 
-export async function POST(req: NextRequest, { params }: { params: { tutorId: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ tutorId: string }> }) {
+  const params = await props.params;
   const auth = await requireTutorApi(params.tutorId);
   if (auth instanceof NextResponse) return auth;
 
@@ -40,7 +41,8 @@ export async function POST(req: NextRequest, { params }: { params: { tutorId: st
   return NextResponse.json(exception, { status: 201 });
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { tutorId: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ tutorId: string }> }) {
+  const params = await props.params;
   const auth = await requireTutorApi(params.tutorId);
   if (auth instanceof NextResponse) return auth;
 

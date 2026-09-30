@@ -118,6 +118,8 @@ model Session {
   status       SessionStatus @default(pending_payment)
 
   stripePaymentIntentId String?
+  // When the student ticked "I agree to the policies" while booking.
+  policiesAcceptedAt    DateTime?
   cancellationToken     String  @unique @default(cuid())
   rescheduleToken       String  @unique @default(cuid())
 
@@ -184,4 +186,15 @@ model BookingLookupToken {
   createdAt DateTime @default(now())
 
   @@index([email, createdAt])
+}
+
+// One row per rate-limited action (a booking, a sign-in email, ...), keyed
+// like "book:ip:1.2.3.4". Counting recent rows enforces the limits across
+// all of Vercel's servers. Old rows are pruned as new ones are added.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
 }
