@@ -19,7 +19,7 @@ export default async function VerifyPage(props: { searchParams: Promise<{ token?
           </form>
         ) : (
           <p className="error-text">
-            This link is missing its sign-in code. <a href="/login">Request a new link</a>.
+            This link is missing its sign-in code. <a href="/tutorlogin">Request a new link</a>.
           </p>
         )}
       </div>

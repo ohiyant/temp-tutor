@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   if (token) await prisma.authSession.deleteMany({ where: { tokenHash: hashToken(token) } });
 
-  const res = NextResponse.redirect(new URL("/login?signedOut=1", req.url), 303);
+  const res = NextResponse.redirect(new URL("/tutorlogin?signedOut=1", req.url), 303);
   res.cookies.delete(SESSION_COOKIE);
   return res;
 }

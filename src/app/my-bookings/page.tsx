@@ -11,8 +11,9 @@ export default async function MyBookingsPage(props: { searchParams: Promise<{ ex
       <div className="card auth-card">
         <h1>My bookings</h1>
         <p className="auth-sub">
-          Enter the email you booked with and we&apos;ll send you a link to see all your sessions, and reschedule or
-          cancel upcoming ones. The link works for {CONFIG.BOOKING_LOOKUP_LINK_HOURS} hours.
+          There&apos;s no account or password: <strong>your bookings are tied to the email you booked with.</strong>{" "}
+          Enter it and we&apos;ll send you a link to see all your sessions, and reschedule or cancel upcoming ones. The
+          link works for {CONFIG.BOOKING_LOOKUP_LINK_HOURS} hours.
         </p>
         {searchParams.expired && (
           <p className="error-text">That link has expired or isn&apos;t valid. Request a new one below.</p>

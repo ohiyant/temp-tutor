@@ -7,6 +7,22 @@ import { colorForTutor } from "@/lib/tutorColor";
 import TutorAvatar from "@/components/TutorAvatar";
 import HeroShine from "./HeroShine";
 
+/**
+ * "UCR …" is drawn like the n-choose-k notation ₙCₖ: a big C with a small,
+ * lowered U before it and R after it. Any other name is shown as is.
+ */
+function SiteTitle({ name }: { name: string }) {
+  if (!name.startsWith("UCR")) return <>{name}</>;
+  return (
+    <span aria-hidden="true">
+      <span className="choose">
+        <sub>U</sub>C<sub>R</sub>
+      </span>
+      {name.slice(3)}
+    </span>
+  );
+}
+
 /** Welcome page: what the site is, and who the tutors are. */
 export default async function HomePage() {
   // A signed-in tutor goes to their own schedule instead of the student landing page.
@@ -24,7 +40,9 @@ export default async function HomePage() {
     <div className="welcome">
       <HeroShine className="welcome-hero">
         <p className="welcome-eyebrow">One-on-one tutoring</p>
-        <h1>{CONFIG.SITE_NAME}</h1>
+        <h1 aria-label={CONFIG.SITE_NAME}>
+          <SiteTitle name={CONFIG.SITE_NAME} />
+        </h1>
         <p className="welcome-tagline">{CONFIG.SITE_TAGLINE}</p>
         <div className="welcome-actions">
           <Link href="/book" className="btn btn-primary btn-large">
@@ -75,13 +93,6 @@ export default async function HomePage() {
           </div>
         </section>
       )}
-
-      <footer className="welcome-footer">
-        <span>Tutoring here?</span>
-        <Link href="/login" className="btn btn-secondary btn-small">
-          Tutor sign-in
-        </Link>
-      </footer>
     </div>
   );
 }

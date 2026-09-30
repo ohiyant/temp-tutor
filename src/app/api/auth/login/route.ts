@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     data: { email, tokenHash, expiresAt: new Date(Date.now() + LOGIN_TOKEN_TTL_MIN * 60 * 1000) },
   });
 
-  const link = `${appUrl()}/login/verify?token=${encodeURIComponent(token)}`;
+  const link = `${appUrl()}/tutorlogin/verify?token=${encodeURIComponent(token)}`;
   await sendEmail(
     email,
     `Your ${CONFIG.SITE_NAME} sign-in link`,

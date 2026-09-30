@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import TimeZoneSelect from "@/components/TimeZoneSelect";
 import TutorAvatar from "@/components/TutorAvatar";
@@ -21,15 +21,16 @@ export default function ProfileManager({
   allSubjects,
   initialSubjectIds,
   initialPhone,
-  initialHourlyRateCents,
+  hourlyRateCents,
   initialOnlineAvailable,
   initialInPersonAvailable,
   initialTimeZone,
   initialPhoto,
   initialSchool,
   initialBio,
+  initialInPersonLocation,
+  initialMeetingLink,
   color,
-  extraPanel,
 }: {
   tutorId: string;
   /** Admins can also change the tutor's name and sign-in email. */
@@ -39,30 +40,32 @@ export default function ProfileManager({
   allSubjects: Subject[];
   initialSubjectIds: string[];
   initialPhone: string;
-  initialHourlyRateCents: number;
+  /** The site-wide rate (set by an admin), shown read-only. */
+  hourlyRateCents: number;
   initialOnlineAvailable: boolean;
   initialInPersonAvailable: boolean;
   initialTimeZone: string;
   initialPhoto: string | null;
   initialSchool: string;
   initialBio: string;
+  initialInPersonLocation: string;
+  initialMeetingLink: string;
   /** The tutor's calendar color, for the placeholder avatar. */
   color: string;
-  /** Another panel to lay out in the same grid (the admin's Remove tutor). */
-  extraPanel?: ReactNode;
 }) {
   const router = useRouter();
   const [name, setName] = useState(initialName);
   const [email, setEmail] = useState(initialEmail);
   const [subjectIds, setSubjectIds] = useState(new Set(initialSubjectIds));
   const [phone, setPhone] = useState(initialPhone);
-  const [rateDollars, setRateDollars] = useState((initialHourlyRateCents / 100).toFixed(2));
   const [online, setOnline] = useState(initialOnlineAvailable);
   const [inPerson, setInPerson] = useState(initialInPersonAvailable);
   const [timeZone, setTimeZone] = useState(initialTimeZone);
   const [photo, setPhoto] = useState<string | null>(initialPhoto);
   const [school, setSchool] = useState(initialSchool);
   const [bio, setBio] = useState(initialBio);
+  const [inPersonLocation, setInPersonLocation] = useState(initialInPersonLocation);
+  const [meetingLink, setMeetingLink] = useState(initialMeetingLink);
   const [photoError, setPhotoError] = useState<string | null>(null);
 
   async function pickPhoto(file: File | undefined) {
@@ -94,11 +97,6 @@ export default function ProfileManager({
   async function save() {
     setError(null);
 
-    const rateCents = Math.round(parseFloat(rateDollars) * 100);
-    if (Number.isNaN(rateCents) || rateCents <= 0) {
-      setError("Enter a valid hourly rate greater than 0.");
-      return;
-    }
     if (!online && !inPerson) {
       setError("Select at least one of Online or In-person.");
       return;
@@ -123,8 +121,9 @@ export default function ProfileManager({
           photo,
           school: school.trim() || null,
           bio: bio.trim() || null,
+          inPersonLocation: inPersonLocation.trim() || null,
+          meetingLink: meetingLink.trim() || null,
           timeZone,
-          hourlyRateCents: rateCents,
           onlineAvailable: online,
           inPersonAvailable: inPerson,
           subjectIds: Array.from(subjectIds),
@@ -196,19 +195,10 @@ export default function ProfileManager({
         </section>
 
         <section className="card panel">
-          <h2>Rate & sessions</h2>
-          <div className="form-field" style={{ marginBottom: "0.9rem" }}>
-            <label htmlFor="tutor-rate">Hourly rate ($)</label>
-            <input
-              id="tutor-rate"
-              type="number"
-              min={0}
-              step="0.01"
-              value={rateDollars}
-              onChange={(e) => setRateDollars(e.target.value)}
-              style={{ width: "8rem" }}
-            />
-          </div>
+          <h2>Sessions</h2>
+          <p className="muted small" style={{ marginTop: 0, marginBottom: "0.9rem" }}>
+            Rate: ${(hourlyRateCents / 100).toFixed(2)}/hr, the same for every tutor{isAdmin ? " (change it on Admin → Rate)" : ""}.
+          </p>
           <div className="form-field">
             <label>Session types</label>
             <label className="checkbox-row">
@@ -218,6 +208,36 @@ export default function ProfileManager({
               <input type="checkbox" checked={inPerson} onChange={(e) => setInPerson(e.target.checked)} /> In-person
             </label>
           </div>
+          {online && (
+            <div className="form-field" style={{ marginTop: "0.8rem" }}>
+              <label htmlFor="tutor-meeting-link">Online meeting link</label>
+              <input
+                id="tutor-meeting-link"
+                type="url"
+                value={meetingLink}
+                maxLength={500}
+                onChange={(e) => setMeetingLink(e.target.value)}
+                placeholder="https://zoom.us/j/… or https://meet.google.com/…"
+              />
+              <span className="muted small">
+                Sent only to students who book an online session with you. Use a link that stays the same, like
+                your Zoom personal meeting room.
+              </span>
+            </div>
+          )}
+          {inPerson && (
+            <div className="form-field" style={{ marginTop: "0.8rem" }}>
+              <label htmlFor="tutor-location">Usual meeting spot</label>
+              <input
+                id="tutor-location"
+                value={inPersonLocation}
+                maxLength={200}
+                onChange={(e) => setInPersonLocation(e.target.value)}
+                placeholder="e.g. Rivera Library, 2nd floor study rooms"
+              />
+              <span className="muted small">Filled in as a suggestion when students book in person. They can pick somewhere else.</span>
+            </div>
+          )}
         </section>
 
         <section className="card panel">
@@ -266,8 +286,6 @@ export default function ProfileManager({
             existing bookings keep their exact time.
           </p>
         </section>
-
-        {extraPanel}
       </div>
 
       <div className="panel-save">

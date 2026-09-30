@@ -1,11 +1,11 @@
+import { getHourlyRateCents } from "@/lib/settings";
 import { prisma } from "@/lib/prisma";
 import { requireTutorPage } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import ProfileManager from "./ProfileManager";
-import RemoveTutor from "./RemoveTutor";
 import { colorForTutor } from "@/lib/tutorColor";
 
-/** Rate & subjects tab: rate, session types, subjects, contact and timezone. */
+/** Profile tab: public profile, session types, subjects, contact and timezone. */
 export default async function ProfilePage(
   props: {
     params: Promise<{ tutorId: string }>;
@@ -22,13 +22,6 @@ export default async function ProfilePage(
 
   const allSubjects = await prisma.subject.findMany({ orderBy: { name: "asc" } });
 
-  const [totalBookings, upcomingBookings] = user.isAdmin
-    ? await Promise.all([
-        prisma.session.count({ where: { tutorId: tutor.id } }),
-        prisma.session.count({ where: { tutorId: tutor.id, status: "confirmed", startAt: { gt: new Date() } } }),
-      ])
-    : [0, 0];
-
   return (
     <ProfileManager
       tutorId={tutor.id}
@@ -38,24 +31,16 @@ export default async function ProfilePage(
       allSubjects={allSubjects}
       initialSubjectIds={tutor.subjects.map((s) => s.subjectId)}
       initialPhone={tutor.phone ?? ""}
-      initialHourlyRateCents={tutor.hourlyRateCents}
+      hourlyRateCents={await getHourlyRateCents()}
       initialOnlineAvailable={tutor.onlineAvailable}
       initialInPersonAvailable={tutor.inPersonAvailable}
       initialTimeZone={tutor.timeZone}
       initialPhoto={tutor.photo}
       initialSchool={tutor.school ?? ""}
       initialBio={tutor.bio ?? ""}
+      initialInPersonLocation={tutor.inPersonLocation ?? ""}
+      initialMeetingLink={tutor.meetingLink ?? ""}
       color={colorForTutor(tutor.id)}
-      extraPanel={
-        user.isAdmin ? (
-          <RemoveTutor
-            tutorId={tutor.id}
-            tutorName={tutor.name}
-            totalBookings={totalBookings}
-            upcomingBookings={upcomingBookings}
-          />
-        ) : undefined
-      }
     />
   );
 }

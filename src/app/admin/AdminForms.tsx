@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { CONFIG } from "@/config";
 import TimeZoneSelect from "@/components/TimeZoneSelect";
 
-/** Client-side forms for the admin pages (/admin/tutors, /admin/subjects). */
+/** Client-side forms for the admin pages (/admin/tutors, /admin/subjects, /admin/rate). */
 
 export interface SubjectRow {
   id: string;
@@ -42,7 +42,6 @@ export function AddTutorForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [rateDollars, setRateDollars] = useState("");
   const [online, setOnline] = useState(true);
   const [inPerson, setInPerson] = useState(false);
   const [timeZone, setTimeZone] = useState<string>(CONFIG.DEFAULT_TIMEZONE);
@@ -62,17 +61,11 @@ export function AddTutorForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const hourlyRateCents = Math.round(parseFloat(rateDollars) * 100);
-    if (!Number.isFinite(hourlyRateCents) || hourlyRateCents <= 0) {
-      setError("Enter an hourly rate greater than 0.");
-      return;
-    }
     setSaving(true);
     const err = await send("/api/tutors", "POST", {
       name,
       email,
       phone: phone || null,
-      hourlyRateCents,
       onlineAvailable: online,
       inPersonAvailable: inPerson,
       subjectIds: Array.from(subjectIds),
@@ -103,19 +96,6 @@ export function AddTutorForm({
         <div className="form-field">
           <label htmlFor="new-phone">Phone (optional)</label>
           <input id="new-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </div>
-        <div className="form-field">
-          <label htmlFor="new-rate">Hourly rate ($)</label>
-          <input
-            id="new-rate"
-            type="number"
-            min="1"
-            step="0.01"
-            required
-            value={rateDollars}
-            onChange={(e) => setRateDollars(e.target.value)}
-            style={{ width: "7rem" }}
-          />
         </div>
         <div className="form-field">
           <label htmlFor="new-tz">Timezone</label>
@@ -212,5 +192,67 @@ export function SubjectsManager({ subjects }: { subjects: SubjectRow[] }) {
       </form>
       {error && <p className="error-text">{error}</p>}
     </div>
+  );
+}
+
+/** The one hourly rate every tutor charges. */
+export function RateForm({ initialHourlyRateCents }: { initialHourlyRateCents: number }) {
+  const router = useRouter();
+  const [rateDollars, setRateDollars] = useState((initialHourlyRateCents / 100).toFixed(2));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSaved(false);
+    const hourlyRateCents = Math.round(parseFloat(rateDollars) * 100);
+    if (!Number.isFinite(hourlyRateCents) || hourlyRateCents <= 0) {
+      setError("Enter an hourly rate greater than 0.");
+      return;
+    }
+    setSaving(true);
+    const err = await send("/api/settings", "PATCH", { hourlyRateCents });
+    setSaving(false);
+    if (err) {
+      setError(err);
+      return;
+    }
+    setSaved(true);
+    router.refresh();
+  }
+
+  return (
+    <form className="card panel" onSubmit={submit}>
+      <h2>Hourly rate</h2>
+      <p className="muted small">
+        The same for every tutor. Changing it only affects new bookings; existing ones keep the price they were booked
+        at.
+      </p>
+      <div className="form-row" style={{ alignItems: "flex-end" }}>
+        <div className="form-field">
+          <label htmlFor="site-rate">Rate ($ per hour)</label>
+          <input
+            id="site-rate"
+            type="number"
+            min="1"
+            step="0.01"
+            required
+            value={rateDollars}
+            onChange={(e) => {
+              setRateDollars(e.target.value);
+              setSaved(false);
+            }}
+            style={{ width: "8rem" }}
+          />
+        </div>
+        <button type="submit" disabled={saving}>
+          {saving ? "Saving…" : "Save"}
+        </button>
+      </div>
+      {error && <p className="error">{error}</p>}
+      {saved && <p className="muted small">Saved.</p>}
+    </form>
   );
 }

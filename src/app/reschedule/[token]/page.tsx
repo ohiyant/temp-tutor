@@ -67,6 +67,8 @@ export default async function ReschedulePage(props: { params: Promise<{ token: s
       <SessionSummary
         subject={session.subject.name}
         tutor={session.tutor.name}
+        tutorInfo={session.tutor}
+        location={session.location}
         when={when}
         durationMin={session.durationMin}
         mode={session.mode}

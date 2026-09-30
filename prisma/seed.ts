@@ -22,6 +22,9 @@ async function main() {
   );
   const byName = Object.fromEntries(subjects.map((s) => [s.name, s]));
 
+  // One hourly rate for every tutor.
+  await prisma.siteSettings.upsert({ where: { id: 1 }, update: {}, create: { id: 1, hourlyRateCents: 3000 } });
+
   console.log("Seeding tutors...");
 
   const alice = await prisma.tutor.upsert({
@@ -31,7 +34,6 @@ async function main() {
       name: "Alice Chen",
       email: "alice.tutor@example.com",
       phone: "555-0101",
-      hourlyRateCents: 6000, // $60/hr
       onlineAvailable: true,
       inPersonAvailable: true,
       minBookingNoticeHours: 24,
@@ -59,7 +61,6 @@ async function main() {
       name: "Brian Alvarez",
       email: "brian.tutor@example.com",
       phone: "555-0102",
-      hourlyRateCents: 5000, // $50/hr
       onlineAvailable: true,
       inPersonAvailable: false,
       minBookingNoticeHours: 12,

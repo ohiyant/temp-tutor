@@ -51,9 +51,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 <a href="/my-bookings" className="btn btn-ghost btn-small">
                   My bookings
                 </a>
-                <a href="/login" className="btn btn-secondary btn-small">
-                  Tutor sign-in
-                </a>
               </>
             )}
           </nav>
@@ -63,6 +60,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <span>{CONFIG.SITE_NAME}</span>
           <a href="/policies">Policies</a>
           <a href="/my-bookings">My bookings</a>
+          <a href="/tutorlogin">Tutor sign-in</a>
         </footer>
       </body>
     </html>

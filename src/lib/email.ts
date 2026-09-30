@@ -16,6 +16,10 @@ import { CONFIG } from "../config";
  *      your own Resend account address; set EMAIL_FROM once it is.
  *   3. Neither: emails are printed to the server console.
  *
+ * `replyTo` sets where replies go. Session emails use it so a student's
+ * reply reaches their tutor (and a tutor's reply reaches the student)
+ * instead of the site's own inbox.
+ *
  * In development (`npm run dev`) nothing is ever sent: every email is
  * printed to the terminal instead, so you can test with other people's
  * addresses without emailing them. Set SEND_EMAILS_IN_DEV="true" in .env to
@@ -38,14 +42,20 @@ const FROM = gmail
   ? `${CONFIG.SITE_NAME} <${gmailUser}>`
   : process.env.EMAIL_FROM ?? `${CONFIG.SITE_NAME} <onboarding@resend.dev>`;
 
-export async function sendEmail(to: string, subject: string, text: string): Promise<void> {
+export async function sendEmail(
+  to: string,
+  subject: string,
+  text: string,
+  replyTo?: string | string[]
+): Promise<void> {
   try {
     if (sendingPaused) {
-      console.log(`[email] (development: not sent)\nTo: ${to}\nSubject: ${subject}\n\n${text}\n`);
+      const replyLine = replyTo ? `\nReply-To: ${[replyTo].flat().join(", ")}` : "";
+      console.log(`[email] (development: not sent)\nTo: ${to}${replyLine}\nSubject: ${subject}\n\n${text}\n`);
     } else if (gmail) {
-      await gmail.sendMail({ from: FROM, to, subject, text });
+      await gmail.sendMail({ from: FROM, to, subject, text, replyTo });
     } else if (resend) {
-      const { error } = await resend.emails.send({ from: FROM, to, subject, text });
+      const { error } = await resend.emails.send({ from: FROM, to, subject, text, replyTo });
       if (error) console.error(`[email] failed to send "${subject}" to ${to}:`, error);
     } else {
       console.log(`[email] (no email service configured, not sent)\nTo: ${to}\nSubject: ${subject}\n\n${text}`);

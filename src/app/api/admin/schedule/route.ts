@@ -74,6 +74,7 @@ export async function GET(req: NextRequest) {
       endAt: s.endAt.toISOString(),
       durationMin: s.durationMin,
       mode: s.mode,
+      location: s.location,
       status: s.status,
       priceCents: s.priceCents,
       subjectName: s.subject.name,

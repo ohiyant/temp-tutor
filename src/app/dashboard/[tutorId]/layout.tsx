@@ -6,7 +6,7 @@ import { requireTutorPage } from "@/lib/auth";
 import TabNav from "@/components/TabNav";
 
 /**
- * A tutor's area: tabs over their Schedule, Availability and Rate & subjects
+ * A tutor's area: tabs over their Schedule, Availability and Profile
  * pages. Seen by that tutor, or by an admin managing them. Each page checks
  * access itself too.
  */
@@ -39,7 +39,7 @@ export default async function TutorLayout(props: { children: ReactNode; params: 
           tabs={[
             { href: base, label: "Schedule" },
             { href: `${base}/availability`, label: "Availability" },
-            { href: `${base}/profile`, label: "Rate & subjects" },
+            { href: `${base}/profile`, label: "Profile" },
           ]}
         />
       </div>

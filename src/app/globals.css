@@ -4,6 +4,11 @@
 
 body {
   margin: 0;
+  /* Keeps the footer at the bottom of the window on short pages. */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #1a1a1a;
   background: #fafafa;
@@ -1065,6 +1070,33 @@ button.secondary {
   transform: translateY(-1px);
 }
 
+/* The card's clickable part (to the tutor's page); the Remove button sits below it. */
+.tutor-card-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.tutor-card-remove {
+  align-self: flex-start;
+  margin-top: 0.3rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: #b91c1c;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tutor-card-remove:hover {
+  background: none;
+  text-decoration: underline;
+}
+
 .tutor-card-head {
   display: flex;
   justify-content: space-between;
@@ -1075,12 +1107,6 @@ button.secondary {
 .tutor-card-name {
   font-weight: 600;
   font-size: 1rem;
-}
-
-.tutor-card-rate {
-  font-variant-numeric: tabular-nums;
-  color: #333;
-  white-space: nowrap;
 }
 
 .tutor-card-email {
@@ -1410,7 +1436,7 @@ body:has(.fit-calendar) .tab-area {
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18);
 }
 
-/* --- Panel pages (tutor Availability and Rate & subjects) --- */
+/* --- Panel pages (tutor Availability and Profile) --- */
 
 .panel-grid {
   display: grid;
@@ -1977,6 +2003,16 @@ body:has(.fit-calendar) .tab-area {
   text-wrap: balance;
 }
 
+/* ₙCₖ-style "UCR": small, lowered U and R on either side of the C. */
+.welcome-hero h1 .choose sub {
+  font-size: 0.4em;
+  font-weight: 600;
+  vertical-align: baseline;
+  position: relative;
+  top: 0.08em;
+  margin: 0 0.04em;
+}
+
 .welcome-tagline {
   margin: 1rem 0 1.75rem;
   max-width: 34rem;
@@ -2075,17 +2111,6 @@ body:has(.fit-calendar) .tab-area {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-}
-
-.welcome-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #ececec;
-  font-size: 0.9rem;
-  color: #5b6472;
 }
 
 @media (max-width: 640px) {
@@ -2236,4 +2261,68 @@ body:has(.calendar-mode) .site-footer {
   width: 1px;
   height: 1px;
   overflow: hidden;
+}
+
+/* --- Session place, tutor contact, email notes --- */
+
+.session-place {
+  display: block;
+  margin-top: 0.2rem;
+  color: #374151;
+  overflow-wrap: anywhere;
+}
+
+.session-place a,
+.session-contact a,
+.done-manage a {
+  color: #2563eb;
+}
+
+.session-contact {
+  display: block;
+  margin-top: 0.15rem;
+  color: #6b7280;
+}
+
+.session-mode-note {
+  display: block;
+  margin-top: 0.2rem;
+  max-width: 16rem;
+}
+
+.form-field .location-label {
+  margin-top: 0.5rem;
+}
+
+.email-note {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #4b5563;
+  background: #f5f8ff;
+  border: 1px solid #dbe3f5;
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  margin-top: 0.3rem;
+}
+
+.review-email {
+  margin: 1rem 0 0;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.manage-summary a {
+  color: #2563eb;
+  overflow-wrap: anywhere;
+}
+
+.materials-note {
+  display: block;
+  margin-top: 0.35rem;
+  line-height: 1.45;
+}
+
+/* Main content takes the spare height, so the footer sits at the bottom. */
+main {
+  flex: 1 0 auto;
 }

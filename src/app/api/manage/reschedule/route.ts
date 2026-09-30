@@ -119,6 +119,7 @@ export async function POST(req: NextRequest) {
             studentPhone: old.studentPhone,
             description: old.description,
             mode: old.mode,
+            location: old.location,
             startAt: newStart,
             endAt: newEnd,
             timezone: old.timezone,

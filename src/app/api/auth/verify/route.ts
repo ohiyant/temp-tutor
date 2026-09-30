@@ -4,12 +4,12 @@ import { SESSION_COOKIE, SESSION_TTL_DAYS, hashToken, newToken } from "@/lib/aut
 
 /**
  * POST /api/auth/verify — exchange a one-time link token for a session.
- * Submitted as a plain form from /login/verify, so it answers with redirects.
+ * Submitted as a plain form from /tutorlogin/verify, so it answers with redirects.
  */
 export async function POST(req: NextRequest) {
   const form = await req.formData().catch(() => null);
   const token = form?.get("token");
-  const fail = () => NextResponse.redirect(new URL("/login?error=link", req.url), 303);
+  const fail = () => NextResponse.redirect(new URL("/tutorlogin?error=link", req.url), 303);
   if (typeof token !== "string" || !token) return fail();
 
   // Claim the token with a conditional update, so a link can't be used

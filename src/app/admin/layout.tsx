@@ -6,9 +6,10 @@ const TABS = [
   { href: "/admin/bookings", label: "Bookings" },
   { href: "/admin/tutors", label: "Tutors" },
   { href: "/admin/subjects", label: "Subjects" },
+  { href: "/admin/rate", label: "Rate" },
 ];
 
-/** Admin area: a tab bar over the Bookings, Tutors and Subjects pages. Each page checks admin access itself too. */
+/** Admin area: a tab bar over the Bookings, Tutors, Subjects and Rate pages. Each page checks admin access itself too. */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   await requireAdminPage();
   return (

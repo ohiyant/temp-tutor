@@ -34,7 +34,6 @@ model Tutor {
   name                   String
   email                  String   @unique
   phone                  String?
-  hourlyRateCents        Int
   onlineAvailable        Boolean  @default(true)
   inPersonAvailable      Boolean  @default(false)
   minBookingNoticeHours  Int      @default(24)
@@ -47,6 +46,11 @@ model Tutor {
   photo                  String?
   school                 String?
   bio                    String?  @db.VarChar(500)
+  // Where sessions happen. The in-person location is only a suggestion that
+  // prefills the booking form (students choose where to meet); the meeting
+  // link only goes to students who have booked.
+  inPersonLocation       String?  @db.VarChar(200)
+  meetingLink            String?  @db.VarChar(500)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
@@ -118,6 +122,9 @@ model Session {
   status       SessionStatus @default(pending_payment)
 
   stripePaymentIntentId String?
+  // In-person sessions: where to meet, chosen by the student when booking
+  // (prefilled with the tutor's usual spot). Null for online sessions.
+  location     String?  @db.VarChar(200)
   // When the student ticked "I agree to the policies" while booking.
   policiesAcceptedAt    DateTime?
   cancellationToken     String  @unique @default(cuid())
@@ -197,4 +204,13 @@ model RateLimitHit {
   createdAt DateTime @default(now())
 
   @@index([key, createdAt])
+}
+
+// Site-wide settings, a single row (id 1), edited by admins.
+model SiteSettings {
+  id              Int      @id @default(1)
+  // What every tutor charges per hour. Each session saves its own price
+  // when booked, so changing this doesn't touch existing bookings.
+  hourlyRateCents Int
+  updatedAt       DateTime @updatedAt
 }

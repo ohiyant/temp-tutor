@@ -4,7 +4,7 @@ import { hashToken } from "@/lib/auth";
 import { canReschedule } from "@/lib/policy";
 import { cancelPath, reschedulePath } from "@/lib/manageLinks";
 import { formatDateTime, isValidTimeZone } from "@/lib/timezone";
-import { ManageShell } from "@/components/ManageSession";
+import { ManageShell, SessionPlaceInfo } from "@/components/ManageSession";
 
 export const metadata = { title: "My bookings" };
 
@@ -69,6 +69,7 @@ export default async function MyBookingsListPage(props: { params: Promise<{ toke
                 · {s.durationMin} min · {s.subject.name} with {s.tutor.name} ·{" "}
                 {s.mode === "online" ? "Online" : "In-person"}
               </span>
+              <SessionPlaceInfo mode={s.mode} tutor={s.tutor} location={s.location} />
             </span>
             <span className="my-booking-actions">
               {canReschedule(s.startAt, now) && <Link href={reschedulePath(s.rescheduleToken)}>Reschedule</Link>}

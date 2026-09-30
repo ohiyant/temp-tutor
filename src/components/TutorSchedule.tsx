@@ -46,6 +46,8 @@ export interface ScheduleSession {
   endAt: string;
   durationMin: number;
   mode: "online" | "in_person";
+  /** In-person: where the student chose to meet. */
+  location?: string | null;
   status: string;
   priceCents: number;
   subjectName: string;
@@ -438,6 +440,12 @@ export function SessionDetails({
         </dd>
         <dt>Mode</dt>
         <dd>{s.mode === "online" ? "Online" : "In-person"}</dd>
+        {s.mode === "in_person" && s.location && (
+          <>
+            <dt>Where</dt>
+            <dd>{s.location}</dd>
+          </>
+        )}
         <dt>Student email</dt>
         <dd>{s.studentEmail}</dd>
         {s.studentPhone && (

@@ -6,7 +6,7 @@
  *   - everything, if it's listed in the ADMIN_EMAILS env var (comma-separated).
  *
  * Flow: /login -> POST /api/auth/login emails a one-time link to
- * /login/verify?token=... -> that page POSTs the token to /api/auth/verify,
+ * /tutorlogin/verify?token=... -> that page POSTs the token to /api/auth/verify,
  * which creates an AuthSession and sets an httpOnly cookie. The extra
  * confirm step stops email link scanners (which GET every link) from
  * burning the token before the person clicks.
@@ -85,10 +85,10 @@ export function canManageTutor(user: CurrentUser, tutorId: string): boolean {
 
 // ---------- Guards for server-rendered pages ----------
 
-/** Redirects to /login when signed out. */
+/** Redirects to /tutorlogin when signed out. */
 export async function requireUserPage(): Promise<CurrentUser> {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/tutorlogin");
   return user;
 }
 

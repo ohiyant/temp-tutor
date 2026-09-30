@@ -77,6 +77,7 @@ interface CalendarTutor {
   hourlyRateCents: number;
   onlineAvailable: boolean;
   inPersonAvailable: boolean;
+  inPersonLocation: string | null;
   earliestAllowedStart: string;
   latestAllowedStart: string;
   // Real UTC instants, not split by day: the grid clips them to its own columns.
@@ -110,10 +111,13 @@ interface Selected {
   hourlyRateCents: number;
   onlineAvailable: boolean;
   inPersonAvailable: boolean;
+  inPersonLocation: string | null;
   startAt: string; // ISO
   blockEndAt: string; // ISO — the free block's own end, bounds max duration
   durationMin: number;
   sessionMode: SessionMode;
+  /** In-person: where to meet. Starts as the tutor's usual spot; the student can change it. */
+  location: string;
 }
 
 // ---------- Layout constants for the grid ----------
@@ -216,6 +220,8 @@ interface BookingResult {
     priceCents: number;
     cancelPath: string;
     reschedulePath: string;
+    place: { label: string; text: string; href?: string };
+    tutorEmail: string;
   }[];
 }
 
@@ -500,10 +506,12 @@ export default function BookingCalendar() {
         hourlyRateCents: d.tutor.hourlyRateCents,
         onlineAvailable: d.tutor.onlineAvailable,
         inPersonAvailable: d.tutor.inPersonAvailable,
+        inPersonLocation: d.tutor.inPersonLocation,
         startAt,
         blockEndAt: d.blockEnd.toISOString(),
         durationMin: d.durationMin,
         sessionMode: defaultMode,
+        location: d.tutor.inPersonLocation ?? "",
       },
     ]);
   }
@@ -522,6 +530,9 @@ export default function BookingCalendar() {
     if (!/^\S+@\S+\.\S+$/.test(email)) return setDetailsError("Enter a valid email.");
     if (description.length > CONFIG.DESCRIPTION_MAX_CHARS) {
       return setDetailsError(`Description must be ${CONFIG.DESCRIPTION_MAX_CHARS} characters or fewer.`);
+    }
+    if (selections.some((s) => s.sessionMode === "in_person" && !s.location.trim())) {
+      return setDetailsError("Enter where you'd like to meet for each in-person session.");
     }
     setBookingError(null);
     setStep("review");
@@ -549,6 +560,7 @@ export default function BookingCalendar() {
             startAt: s.startAt,
             durationMin: s.durationMin,
             mode: s.sessionMode,
+            ...(s.sessionMode === "in_person" ? { location: s.location.trim() } : {}),
           })),
         }),
       });
@@ -968,6 +980,32 @@ export default function BookingCalendar() {
                       {s.onlineAvailable && <option value="online">Online</option>}
                       {s.inPersonAvailable && <option value="in_person">In-person</option>}
                     </select>
+                    {s.sessionMode === "online" ? (
+                      <span className="muted small session-mode-note">
+                        The meeting link comes in your confirmation email.
+                      </span>
+                    ) : (
+                      <>
+                        <label htmlFor={`location-${s.id}`} className="location-label">
+                          Where to meet
+                        </label>
+                        <input
+                          id={`location-${s.id}`}
+                          type="text"
+                          maxLength={200}
+                          placeholder="e.g. Rivera Library, 2nd floor"
+                          value={s.location}
+                          onChange={(e) => updateSelection(s.id, { location: e.target.value })}
+                        />
+                        {s.inPersonLocation && (
+                          <span className="muted small session-mode-note">
+                            {s.location.trim() === s.inPersonLocation
+                              ? `${s.tutorName}'s usual spot. Change it if you'd like to meet somewhere else.`
+                              : `${s.tutorName} usually meets at ${s.inPersonLocation}.`}
+                          </span>
+                        )}
+                      </>
+                    )}
                   </div>
                   <div className="form-field duration-field">
                     <label>
@@ -998,8 +1036,13 @@ export default function BookingCalendar() {
             <input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="form-field" style={{ marginBottom: "0.75rem" }}>
-            <label>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <label htmlFor="booking-email">Email</label>
+            <input id="booking-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <span className="email-note">
+              <strong>Use an email you check.</strong> It&apos;s how we identify your bookings: your confirmation,
+              meeting details and reschedule/cancel links go there, and you&apos;ll use it to find your bookings
+              later under <em>My bookings</em>.
+            </span>
           </div>
           <div className="form-field" style={{ marginBottom: "0.75rem" }}>
             <label>Phone</label>
@@ -1016,6 +1059,10 @@ export default function BookingCalendar() {
               onChange={(e) => setDescription(e.target.value)}
               style={{ padding: "0.5rem", border: "1px solid #ccc", borderRadius: "4px", fontFamily: "inherit" }}
             />
+            <span className="muted small materials-note">
+              Have homework or notes to share? Paste a link here (Google Drive, Docs), or reply to your
+              confirmation email with them. Replies go straight to your tutor.
+            </span>
           </div>
           {/* Honeypot: off-screen and skipped by keyboard and screen readers; bots fill every field. */}
           <div className="honeypot" aria-hidden="true">
@@ -1049,7 +1096,7 @@ export default function BookingCalendar() {
               <span>
                 {s.tutorName} · {fmtLongDate(localDate(s.startAt, timeZone))} · {fmtTime(s.startAt, timeZone)}–
                 {fmtTime(selectionEndIso(s), timeZone)} ·{" "}
-                {s.durationMin} min · {s.sessionMode === "online" ? "Online" : "In-person"}
+                {s.durationMin} min · {s.sessionMode === "online" ? "Online" : `In person at ${s.location.trim()}`}
               </span>
               <span>{fmtPrice(sessionPriceCents(s.hourlyRateCents, s.durationMin))}</span>
             </div>
@@ -1074,6 +1121,11 @@ export default function BookingCalendar() {
               session.
             </p>
           </div>
+
+          <p className="review-email">
+            Your confirmation, meeting details and reschedule/cancel links will go to <strong>{email}</strong>. Your
+            bookings are tied to this address, so make sure it&apos;s right.
+          </p>
 
           <label className="checkbox-row policy-agree">
             <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
@@ -1136,8 +1188,19 @@ export default function BookingCalendar() {
                 {s.tutorName} · {fmtLongDate(localDate(s.startAt, timeZone))} · {fmtTime(s.startAt, timeZone)}–
                 {fmtTime(s.endAt, timeZone)} ·{" "}
                 {s.durationMin} min · {s.mode === "online" ? "Online" : "In-person"}
+                <span className="session-place small">
+                  {s.place.label}:{" "}
+                  {s.place.href ? (
+                    <a href={s.place.href} target="_blank" rel="noopener noreferrer">
+                      {s.place.text}
+                    </a>
+                  ) : (
+                    s.place.text
+                  )}
+                </span>
                 <span className="done-manage small">
-                  <a href={s.reschedulePath}>Reschedule</a> · <a href={s.cancelPath}>Cancel</a>
+                  <a href={s.reschedulePath}>Reschedule</a> · <a href={s.cancelPath}>Cancel</a> · Questions? Email{" "}
+                  {s.tutorName} at <a href={`mailto:${s.tutorEmail}`}>{s.tutorEmail}</a>
                 </span>
               </span>
               <span>{fmtPrice(s.priceCents)}</span>
@@ -1151,6 +1214,10 @@ export default function BookingCalendar() {
               <strong>{fmtPrice(bookingResult.totalCents)}</strong>
             </span>
           </div>
+          <p className="muted small materials-note">
+            Have homework, notes or practice problems you&apos;d like to go over? Reply to your confirmation email
+            with them before the session. Replies go straight to your tutor.
+          </p>
           <div className="form-row" style={{ marginTop: "1.5rem" }}>
             <button
               onClick={() => {

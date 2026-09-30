@@ -8,8 +8,10 @@ import type { BusyRange } from "@/lib/availability";
 import { formatDateTime, isValidTimeZone } from "@/lib/timezone";
 import { appUrl, cancelPath, newManageToken, reschedulePath } from "@/lib/manageLinks";
 import { manageLinksText } from "@/lib/sessionEmails";
+import { sessionPlace, sessionPlaceLine, tutorContactLine } from "@/lib/sessionPlace";
 import { DAY_MS as ONE_DAY_MS, HOUR_MS, clientIp, rateLimit } from "@/lib/rateLimit";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { getHourlyRateCents } from "@/lib/settings";
 
 /**
  * POST /api/bookings — book one or more sessions for a guest student.
@@ -44,6 +46,8 @@ const bodySchema = z.object({
         startAt: z.string().datetime(),
         durationMin: z.number().int(),
         mode: z.enum(["online", "in_person"]),
+        /** In-person sessions: where to meet, chosen by the student. */
+        location: z.string().trim().max(200, "Keep the meeting place under 200 characters.").optional(),
       })
     )
     .min(1, "Pick at least one session.")
@@ -83,6 +87,13 @@ export async function POST(req: NextRequest) {
       { status: 429 }
     );
   }
+
+  if (input.sessions.some((s) => s.mode === "in_person" && !s.location)) {
+    return NextResponse.json({ error: "Enter where you'd like to meet for each in-person session." }, { status: 400 });
+  }
+
+  // One rate for every tutor, read once; each session saves its own price.
+  const hourlyRateCents = await getHourlyRateCents();
 
   const requested = input.sessions
     .map((s) => {
@@ -199,7 +210,7 @@ export async function POST(req: NextRequest) {
             throw new BookingConflict(`${tutor.name}, ${formatDateTime(s.start, input.timeZone)}: ${problem}`);
           }
 
-          accepted.push({ ...s, tutorName: tutor.name, priceCents: sessionPriceCents(tutor.hourlyRateCents, s.durationMin) });
+          accepted.push({ ...s, tutorName: tutor.name, priceCents: sessionPriceCents(hourlyRateCents, s.durationMin) });
         }
 
         const sessions = [];
@@ -213,6 +224,7 @@ export async function POST(req: NextRequest) {
               studentPhone: input.studentPhone || null,
               description: input.description,
               mode: a.mode,
+              location: a.mode === "in_person" ? a.location ?? null : null,
               startAt: a.start,
               endAt: a.end,
               timezone: input.timeZone, // the student's, for their emails
@@ -232,6 +244,7 @@ export async function POST(req: NextRequest) {
               mode: true,
               priceCents: true,
               cancellationToken: true,
+              location: true,
               rescheduleToken: true,
             },
           });
@@ -248,11 +261,16 @@ export async function POST(req: NextRequest) {
       {
         subjectName: created.subjectName,
         totalCents: created.sessions.reduce((sum, s) => sum + s.priceCents, 0),
-        sessions: created.sessions.map(({ tutorId: _tutorId, cancellationToken, rescheduleToken, ...s }) => ({
-          ...s,
-          cancelPath: cancelPath(cancellationToken),
-          reschedulePath: reschedulePath(rescheduleToken),
-        })),
+        sessions: created.sessions.map(({ tutorId, cancellationToken, rescheduleToken, ...s }) => {
+          const tutor = created.tutors.find((t) => t.id === tutorId)!;
+          return {
+            ...s,
+            cancelPath: cancelPath(cancellationToken),
+            reschedulePath: reschedulePath(rescheduleToken),
+            place: sessionPlace(s.mode, tutor, s.location),
+            tutorEmail: tutor.email,
+          };
+        }),
       },
       { status: 201 }
     );
@@ -279,13 +297,22 @@ async function sendConfirmationEmails(
       startAt: Date;
       durationMin: number;
       mode: "online" | "in_person";
+      location: string | null;
       priceCents: number;
       cancellationToken: string;
       rescheduleToken: string;
     }[];
-    tutors: { id: string; name: string; email: string; timeZone: string }[];
+    tutors: {
+      id: string;
+      name: string;
+      email: string;
+      timeZone: string;
+      inPersonLocation: string | null;
+      meetingLink: string | null;
+    }[];
   }
 ) {
+  const tutorOf = (s: { tutorId: string }) => created.tutors.find((t) => t.id === s.tutorId)!;
   // Each person sees times in their own timezone.
   const line = (s: (typeof created.sessions)[number], timeZone: string) =>
     `- ${formatDateTime(s.startAt, timeZone)} · ${s.durationMin} min · ${modeLabel(s.mode)} · ${s.tutorName} · $${(
@@ -297,7 +324,15 @@ async function sendConfirmationEmails(
     "",
     `Your ${created.subjectName} tutoring session${created.sessions.length === 1 ? " is" : "s are"} booked:`,
     "",
-    ...created.sessions.flatMap((s) => [line(s, input.timeZone), ...manageLinksText(s).map((l) => `    ${l}`)]),
+    ...created.sessions.flatMap((s) => [
+      line(s, input.timeZone),
+      `    ${sessionPlaceLine(s.mode, tutorOf(s), s.location)}`,
+      ...manageLinksText(s).map((l) => `    ${l}`),
+    ]),
+    "",
+    // One contact line per tutor in this booking.
+    ...created.tutors.filter((t) => created.sessions.some((s) => s.tutorId === t.id)).map(tutorContactLine),
+    "Have homework, notes or practice problems you'd like to go over? Reply to this email with them before the session so your tutor can take a look.",
     "",
     `Need to change plans? You can reschedule up to ${CONFIG.RESCHEDULE_MIN_NOTICE_HOURS} hours before, or cancel any time before the session.`,
     `See all your bookings any time at ${appUrl()}/my-bookings`,
@@ -306,7 +341,9 @@ async function sendConfirmationEmails(
     CONFIG.SITE_NAME,
   ].join("\n");
 
-  const emails = [sendEmail(input.studentEmail, `Booking confirmed: ${created.subjectName}`, studentText)];
+  // Replies go to the tutor(s), e.g. a student sending homework ahead of the session.
+  const bookedTutorEmails = created.tutors.filter((t) => created.sessions.some((s) => s.tutorId === t.id)).map((t) => t.email);
+  const emails = [sendEmail(input.studentEmail, `Booking confirmed: ${created.subjectName}`, studentText, bookedTutorEmails)];
 
   for (const tutor of created.tutors) {
     const theirs = created.sessions.filter((s) => s.tutorId === tutor.id);
@@ -316,10 +353,13 @@ async function sendConfirmationEmails(
       "",
       `${input.studentName} (${input.studentEmail}${input.studentPhone ? `, ${input.studentPhone}` : ""}) booked ${created.subjectName}:`,
       "",
-      ...theirs.map((s) => line(s, tutor.timeZone)),
+      // The tutor needs to know where each in-person session is (the student chose it).
+      ...theirs.flatMap((s) => [line(s, tutor.timeZone), ...(s.mode === "in_person" ? [`    ${sessionPlaceLine(s.mode, tutor, s.location)}`] : [])]),
       ...(input.description ? ["", "What they need help with:", input.description] : []),
     ].join("\n");
-    emails.push(sendEmail(tutor.email, `New booking: ${created.subjectName} with ${input.studentName}`, tutorText));
+    emails.push(
+      sendEmail(tutor.email, `New booking: ${created.subjectName} with ${input.studentName}`, tutorText, input.studentEmail)
+    );
   }
 
   await Promise.all(emails);

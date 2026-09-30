@@ -9,7 +9,6 @@ const patchSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   email: z.string().trim().toLowerCase().email().optional(),
   phone: z.string().nullable().optional(),
-  hourlyRateCents: z.number().int().positive().optional(),
   onlineAvailable: z.boolean().optional(),
   inPersonAvailable: z.boolean().optional(),
   subjectIds: z.array(z.string()).optional(),
@@ -26,6 +25,15 @@ const patchSchema = z.object({
     .optional(),
   school: z.string().trim().max(100).nullable().optional(),
   bio: z.string().trim().max(500, "Keep the bio under 500 characters.").nullable().optional(),
+  inPersonLocation: z.string().trim().max(200, "Keep the location under 200 characters.").nullable().optional(),
+  meetingLink: z
+    .string()
+    .trim()
+    .max(500)
+    .url("Enter the full meeting link, starting with https://")
+    .refine((u) => /^https?:\/\//i.test(u), "Enter the full meeting link, starting with https://")
+    .nullable()
+    .optional(),
 });
 
 export async function GET(_req: NextRequest, props: { params: Promise<{ tutorId: string }> }) {

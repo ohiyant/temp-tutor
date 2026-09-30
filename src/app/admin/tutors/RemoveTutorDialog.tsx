@@ -3,20 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-/** Admin-only "danger zone": permanently deletes a tutor and all their bookings. */
-export default function RemoveTutor({
+/** Admin-only confirmation, opened from a tutor card: permanently deletes a tutor and all their bookings. */
+export default function RemoveTutorDialog({
   tutorId,
   tutorName,
   totalBookings,
   upcomingBookings,
+  onClose,
 }: {
   tutorId: string;
   tutorName: string;
   totalBookings: number;
   upcomingBookings: number;
+  onClose: () => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export default function RemoveTutor({
         setDeleting(false);
         return;
       }
-      router.push("/admin/tutors");
+      onClose();
       router.refresh();
     } catch {
       setError("Couldn't reach the server. Try again.");
@@ -42,7 +43,7 @@ export default function RemoveTutor({
 
   return (
     <section className="card panel danger-zone">
-      <h2>Remove tutor</h2>
+      <h2>Remove {tutorName}?</h2>
       <p className="small">
         Permanently deletes {tutorName}, their availability, and{" "}
         <strong>
@@ -56,36 +57,28 @@ export default function RemoveTutor({
           won&apos;t be emailed, so contact them first.
         </p>
       )}
-
-      {!open ? (
-        <button className="danger" onClick={() => setOpen(true)}>
-          Remove {tutorName}…
-        </button>
-      ) : (
-        <div className="danger-confirm">
-          <div className="form-field">
-            <label htmlFor="confirm-name">
-              Type <strong>{tutorName}</strong> to confirm
-            </label>
-            <input id="confirm-name" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
-          </div>
-          <div className="form-row" style={{ marginBottom: 0 }}>
-            <button className="danger" disabled={typed.trim() !== tutorName || deleting} onClick={remove}>
-              {deleting ? "Removing…" : "Permanently remove"}
-            </button>
-            <button
-              className="secondary"
-              disabled={deleting}
-              onClick={() => {
-                setOpen(false);
-                setTyped("");
-              }}
-            >
-              Cancel
-            </button>
-          </div>
+      <div className="danger-confirm">
+        <div className="form-field">
+          <label htmlFor="confirm-name">
+            Type <strong>{tutorName}</strong> to confirm
+          </label>
+          <input
+            id="confirm-name"
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            autoComplete="off"
+            autoFocus
+          />
         </div>
-      )}
+        <div className="form-row" style={{ marginBottom: 0 }}>
+          <button className="danger" disabled={typed.trim() !== tutorName || deleting} onClick={remove}>
+            {deleting ? "Removing…" : "Permanently remove"}
+          </button>
+          <button className="secondary" disabled={deleting} onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </div>
       {error && <p className="error-text">{error}</p>}
     </section>
   );

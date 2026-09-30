@@ -8,6 +8,7 @@ import { sendEmail } from "@/lib/email";
 import { appUrl, cancelPath, reschedulePath } from "@/lib/manageLinks";
 import { formatDateTime, isValidTimeZone } from "@/lib/timezone";
 import { CONFIG } from "../config";
+import { sessionPlaceLine, tutorContactLine } from "@/lib/sessionPlace";
 
 export interface SessionForEmail {
   startAt: Date;
@@ -15,9 +16,17 @@ export interface SessionForEmail {
   studentName: string;
   studentEmail: string;
   timezone: string;
+  mode: "online" | "in_person";
+  location: string | null;
   cancellationToken: string;
   rescheduleToken: string;
-  tutor: { name: string; email: string; timeZone: string };
+  tutor: {
+    name: string;
+    email: string;
+    timeZone: string;
+    inPersonLocation: string | null;
+    meetingLink: string | null;
+  };
   subject: { name: string };
 }
 
@@ -65,8 +74,11 @@ export async function sendCancellationEmails(
         cancelledBy === "student"
           ? "You're welcome to book again any time."
           : "Sorry for the inconvenience. You're welcome to book another time.",
+        tutorContactLine(s.tutor),
+        "",
         CONFIG.SITE_NAME,
-      ].join("\n")
+      ].join("\n"),
+      s.tutor.email
     ),
     sendEmail(
       s.tutor.email,
@@ -78,7 +90,8 @@ export async function sendCancellationEmails(
           ? `You cancelled the ${s.subject.name} session with ${s.studentName} on ${tutorWhen} (${s.durationMin} min). They've been emailed.`
           : `The ${s.subject.name} session with ${s.studentName} on ${tutorWhen} (${s.durationMin} min) has been cancelled${byWhom}.`,
         ...(reason && cancelledBy === "admin" ? ["", "Note sent to the student:", reason] : []),
-      ].join("\n")
+      ].join("\n"),
+      s.studentEmail
     ),
   ]);
 }
@@ -96,12 +109,16 @@ export async function sendRescheduleEmails(oldStartAt: Date, s: SessionForEmail)
         "",
         `  From: ${formatDateTime(oldStartAt, zone)}`,
         `  To:   ${formatDateTime(s.startAt, zone)} (${s.durationMin} min)`,
+        `  ${sessionPlaceLine(s.mode, s.tutor, s.location)}`,
+        "",
+        tutorContactLine(s.tutor),
         "",
         "Need to change it again?",
         ...manageLinksText(s),
         "",
         CONFIG.SITE_NAME,
-      ].join("\n")
+      ].join("\n"),
+      s.tutor.email
     ),
     sendEmail(
       s.tutor.email,
@@ -113,7 +130,8 @@ export async function sendRescheduleEmails(oldStartAt: Date, s: SessionForEmail)
         "",
         `  From: ${formatDateTime(oldStartAt, s.tutor.timeZone)}`,
         `  To:   ${formatDateTime(s.startAt, s.tutor.timeZone)} (${s.durationMin} min)`,
-      ].join("\n")
+      ].join("\n"),
+      s.studentEmail
     ),
   ]);
 }

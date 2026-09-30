@@ -17,7 +17,7 @@ function shortTime(hhmm: string): string {
 }
 
 export default async function AdminTutorsPage() {
-  await requireAdminPage();
+  const user = await requireAdminPage();
   const now = new Date();
   const [tutors, subjects] = await Promise.all([
     prisma.tutor.findMany({
@@ -26,6 +26,7 @@ export default async function AdminTutorsPage() {
         subjects: { include: { subject: true } },
         availabilityBlocks: { orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }] },
         _count: { select: { sessions: { where: { status: "confirmed", endAt: { gt: now } } } } },
+        sessions: { select: { id: true } },
       },
     }),
     prisma.subject.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
@@ -39,7 +40,6 @@ export default async function AdminTutorsPage() {
         name: t.name,
         email: t.email,
         color: colorForTutor(t.id),
-        rate: `$${(t.hourlyRateCents / 100).toFixed(2)}/hr`,
         modes: [t.onlineAvailable && "Online", t.inPersonAvailable && "In-person"].filter(Boolean).join(" & "),
         subjects: t.subjects.map((s) => s.subject.name),
         weekly: t.availabilityBlocks.map(
@@ -47,6 +47,9 @@ export default async function AdminTutorsPage() {
         ),
         timeZone: timeZoneOptionLabel(t.timeZone, now),
         upcoming: t._count.sessions,
+        totalBookings: t.sessions.length,
+        // An admin can't remove themselves.
+        removable: user.tutor?.id !== t.id,
       }))}
     />
   );

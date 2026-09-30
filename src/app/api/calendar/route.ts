@@ -5,6 +5,7 @@ import { addDays, isValidTimeZone, startOfDay } from "@/lib/timezone";
 import { CONFIG } from "@/config";
 import { colorForTutor } from "@/lib/tutorColor";
 import { z } from "zod";
+import { getHourlyRateCents } from "@/lib/settings";
 
 const querySchema = z.object({
   subjectId: z.string().min(1),
@@ -54,6 +55,8 @@ async function buildCalendarResponse(parsed: z.infer<typeof querySchema>) {
   const modeFilter =
     mode === "online" ? { onlineAvailable: true } : mode === "in_person" ? { inPersonAvailable: true } : {};
 
+  // The same for every tutor; kept on each tutor below so the booking page can price each selection.
+  const hourlyRateCents = await getHourlyRateCents();
   const tutors = await prisma.tutor.findMany({
     where: {
       ...modeFilter,
@@ -158,9 +161,12 @@ async function buildCalendarResponse(parsed: z.infer<typeof querySchema>) {
       tutorName: tutor.name,
       timeZone: tutor.timeZone,
       color: colorForTutor(tutor.id),
-      hourlyRateCents: tutor.hourlyRateCents,
+      hourlyRateCents,
       onlineAvailable: tutor.onlineAvailable,
       inPersonAvailable: tutor.inPersonAvailable,
+      // Public: where in-person sessions happen. (The meeting link isn't
+      // sent here; only students who book get it.)
+      inPersonLocation: tutor.inPersonLocation,
       earliestAllowedStart: earliestAllowedStart.toISOString(),
       latestAllowedStart: latestAllowedStart.toISOString(),
       minBookingNoticeHours: tutor.minBookingNoticeHours,

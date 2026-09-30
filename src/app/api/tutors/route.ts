@@ -10,7 +10,6 @@ const createSchema = z
     name: z.string().trim().min(1, "Enter a name.").max(200),
     email: z.string().trim().toLowerCase().email("Enter a valid email."),
     phone: z.string().trim().max(50).optional().nullable(),
-    hourlyRateCents: z.number().int().positive("Enter an hourly rate greater than 0."),
     onlineAvailable: z.boolean(),
     inPersonAvailable: z.boolean(),
     subjectIds: z.array(z.string()).default([]),
