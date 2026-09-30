@@ -14,8 +14,15 @@ import { CONFIG } from "../config";
  *   2. Resend, when RESEND_API_KEY is set. Until a domain is verified in
  *      Resend, the default onboarding@resend.dev sender can only deliver to
  *      your own Resend account address; set EMAIL_FROM once it is.
- *   3. Neither: emails are printed to the server console (handy in development).
+ *   3. Neither: emails are printed to the server console.
+ *
+ * In development (`npm run dev`) nothing is ever sent: every email is
+ * printed to the terminal instead, so you can test with other people's
+ * addresses without emailing them. Set SEND_EMAILS_IN_DEV="true" in .env to
+ * send for real while developing (e.g. to check how an email looks).
  */
+
+const sendingPaused = process.env.NODE_ENV !== "production" && process.env.SEND_EMAILS_IN_DEV !== "true";
 
 const gmailUser = process.env.GMAIL_USER?.trim();
 const gmailPassword = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, ""); // Google shows it in groups of 4
@@ -33,7 +40,9 @@ const FROM = gmail
 
 export async function sendEmail(to: string, subject: string, text: string): Promise<void> {
   try {
-    if (gmail) {
+    if (sendingPaused) {
+      console.log(`[email] (development: not sent)\nTo: ${to}\nSubject: ${subject}\n\n${text}\n`);
+    } else if (gmail) {
       await gmail.sendMail({ from: FROM, to, subject, text });
     } else if (resend) {
       const { error } = await resend.emails.send({ from: FROM, to, subject, text });

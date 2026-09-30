@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { LOGIN_EMAILS_PER_HOUR, LOGIN_TOKEN_TTL_MIN, isAdminEmail, newToken, normalizeEmail } from "@/lib/auth";
 import { CONFIG } from "@/config";
+import { appUrl } from "@/lib/manageLinks";
 
 const bodySchema = z.object({ email: z.string().trim().email("Enter a valid email.") });
 
@@ -36,8 +37,7 @@ export async function POST(req: NextRequest) {
     data: { email, tokenHash, expiresAt: new Date(Date.now() + LOGIN_TOKEN_TTL_MIN * 60 * 1000) },
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? req.nextUrl.origin;
-  const link = `${appUrl}/login/verify?token=${encodeURIComponent(token)}`;
+  const link = `${appUrl()}/login/verify?token=${encodeURIComponent(token)}`;
   await sendEmail(
     email,
     `Your ${CONFIG.SITE_NAME} sign-in link`,

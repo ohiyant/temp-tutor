@@ -41,6 +41,12 @@ model Tutor {
   maxBookingWindowHours  Int      @default(720) // 30 days
   // IANA timezone the tutor's weekly hours and exceptions are written in.
   timeZone               String   @default("America/Chicago")
+  // Public profile, shown on the welcome page.
+  // A small JPEG as a data URL (resized in the browser before upload), so no
+  // separate image storage is needed.
+  photo                  String?
+  school                 String?
+  bio                    String?  @db.VarChar(500)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 

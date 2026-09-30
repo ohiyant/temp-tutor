@@ -274,6 +274,12 @@ export default function BookingCalendar() {
     const zone = localTimeZone();
     setTimeZoneChoice(zone);
     setCalendarStart(todayIn(zone));
+    // Links from the welcome page ("Book with Alex") preselect a subject and tutor.
+    const query = new URLSearchParams(window.location.search);
+    const subjectParam = query.get("subject");
+    const tutorParam = query.get("tutor");
+    if (subjectParam) setSubjectId(subjectParam);
+    if (tutorParam) setFilterTutorId(tutorParam);
     setCoarsePointer(window.matchMedia("(pointer: coarse)").matches);
     // Phones: 3 days fit on screen; 7 would need sideways scrolling.
     if (window.innerWidth < 640) setCalendarDays(3);

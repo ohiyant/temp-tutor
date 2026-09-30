@@ -16,6 +16,16 @@ const patchSchema = z.object({
   timeZone: z.string().refine(isValidTimeZone, "Unknown timezone").optional(),
   minBookingNoticeHours: z.number().int().min(0).optional(),
   maxBookingWindowHours: z.number().int().positive().optional(),
+  // Public profile. The photo is a small image resized in the browser, sent as
+  // a data URL (~20–60 KB); the cap keeps a bad upload from bloating the page.
+  photo: z
+    .string()
+    .regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/, "Upload a JPEG, PNG or WebP image.")
+    .max(400_000, "That photo is too large.")
+    .nullable()
+    .optional(),
+  school: z.string().trim().max(100).nullable().optional(),
+  bio: z.string().trim().max(500, "Keep the bio under 500 characters.").nullable().optional(),
 });
 
 export async function GET(_req: NextRequest, { params }: { params: { tutorId: string } }) {

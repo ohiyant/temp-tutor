@@ -3,6 +3,10 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import TimeZoneSelect from "@/components/TimeZoneSelect";
+import TutorAvatar from "@/components/TutorAvatar";
+import { resizeToSquareJpeg } from "@/lib/resizeImage";
+
+const BIO_MAX = 500;
 
 interface Subject {
   id: string;
@@ -21,6 +25,10 @@ export default function ProfileManager({
   initialOnlineAvailable,
   initialInPersonAvailable,
   initialTimeZone,
+  initialPhoto,
+  initialSchool,
+  initialBio,
+  color,
   extraPanel,
 }: {
   tutorId: string;
@@ -35,6 +43,11 @@ export default function ProfileManager({
   initialOnlineAvailable: boolean;
   initialInPersonAvailable: boolean;
   initialTimeZone: string;
+  initialPhoto: string | null;
+  initialSchool: string;
+  initialBio: string;
+  /** The tutor's calendar color, for the placeholder avatar. */
+  color: string;
   /** Another panel to lay out in the same grid (the admin's Remove tutor). */
   extraPanel?: ReactNode;
 }) {
@@ -47,6 +60,24 @@ export default function ProfileManager({
   const [online, setOnline] = useState(initialOnlineAvailable);
   const [inPerson, setInPerson] = useState(initialInPersonAvailable);
   const [timeZone, setTimeZone] = useState(initialTimeZone);
+  const [photo, setPhoto] = useState<string | null>(initialPhoto);
+  const [school, setSchool] = useState(initialSchool);
+  const [bio, setBio] = useState(initialBio);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  async function pickPhoto(file: File | undefined) {
+    setPhotoError(null);
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Choose an image file (JPEG, PNG, …).");
+      return;
+    }
+    try {
+      setPhoto(await resizeToSquareJpeg(file));
+    } catch (e) {
+      setPhotoError(e instanceof Error ? e.message : "Couldn't read that image.");
+    }
+  }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -89,6 +120,9 @@ export default function ProfileManager({
         body: JSON.stringify({
           ...(isAdmin ? { name: name.trim(), email: email.trim() } : {}),
           phone: phone || null,
+          photo,
+          school: school.trim() || null,
+          bio: bio.trim() || null,
           timeZone,
           hourlyRateCents: rateCents,
           onlineAvailable: online,
@@ -109,6 +143,58 @@ export default function ProfileManager({
   return (
     <div className="panel-page">
       <div className="panel-grid">
+        <section className="card panel profile-public">
+          <h2>Public profile</h2>
+          <p className="muted small">Shown to students on the welcome page.</p>
+          <div className="profile-photo-row">
+            <TutorAvatar name={name} photo={photo} color={color} size={72} />
+            <div className="profile-photo-actions">
+              <label className="btn btn-secondary btn-small">
+                {photo ? "Change photo" : "Upload photo"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    pickPhoto(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {photo && (
+                <button type="button" className="link-button" onClick={() => setPhoto(null)}>
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+          {photoError && <p className="error-text">{photoError}</p>}
+          <div className="form-field" style={{ margin: "0.8rem 0 0.6rem" }}>
+            <label htmlFor="tutor-school">School</label>
+            <input
+              id="tutor-school"
+              value={school}
+              maxLength={100}
+              onChange={(e) => setSchool(e.target.value)}
+              placeholder="e.g. UC Riverside, Computer Science"
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="tutor-bio">
+              About you ({bio.length}/{BIO_MAX})
+            </label>
+            <textarea
+              id="tutor-bio"
+              rows={4}
+              maxLength={BIO_MAX}
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="A sentence or two about how you teach and what you like helping with."
+              className="profile-bio"
+            />
+          </div>
+        </section>
+
         <section className="card panel">
           <h2>Rate & sessions</h2>
           <div className="form-field" style={{ marginBottom: "0.9rem" }}>

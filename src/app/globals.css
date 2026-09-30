@@ -4,9 +4,35 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #1a1a1a;
   background: #fafafa;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Form controls don't inherit the page font by default. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.015em;
+}
+
+/* Numbers that line up (times, prices, counts) use equal-width digits. */
+.calendar-time-label,
+.calendar-day-header,
+.range-label,
+.month-day-num,
+.calendar-block {
+  font-variant-numeric: tabular-nums;
 }
 
 .site-header {
@@ -1808,4 +1834,332 @@ body:has(.fit-calendar) .tab-area {
 
 .legend-swatch.legend-unbookable {
   background: repeating-linear-gradient(135deg, #e2e8f0 0 3px, #cbd5e1 3px 6px);
+}
+
+/* --- Buttons (also for links that act as buttons) --- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.25);
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.btn-secondary {
+  background: white;
+  color: #1f2937;
+  border-color: #d1d5db;
+}
+
+.btn-secondary:hover {
+  background: #f3f4f6;
+  border-color: #c3c7ce;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #374151;
+}
+
+.btn-ghost:hover {
+  background: #f3f4f6;
+}
+
+.btn-small {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  border-radius: 7px;
+}
+
+.btn-large {
+  padding: 0.75rem 1.4rem;
+  font-size: 1rem;
+  border-radius: 10px;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #2563eb;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.site-header nav {
+  gap: 0.5rem;
+}
+
+/* --- Tutor avatar --- */
+
+.tutor-avatar {
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e5e7eb;
+}
+
+.tutor-avatar-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* --- Welcome page --- */
+
+.welcome {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.welcome-hero {
+  padding: 3rem 2.75rem;
+  border-radius: 18px;
+  /* --shine-x / --shine-y drift gently away from the mouse (HeroShine);
+     they rest near the top-right. */
+  background:
+    radial-gradient(circle at var(--shine-x, 88%) var(--shine-y, 12%), rgba(37, 99, 235, 0.12), transparent 55%),
+    linear-gradient(160deg, #f5f8ff 0%, #ffffff 70%);
+  border: 1px solid #e3e9f7;
+}
+
+.welcome-eyebrow {
+  margin: 0 0 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.welcome-hero h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.welcome-tagline {
+  margin: 1rem 0 1.75rem;
+  max-width: 34rem;
+  font-size: 1.1rem;
+  line-height: 1.55;
+  color: #4b5563;
+}
+
+.welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.welcome-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.welcome-step {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  padding: 1.1rem 1.2rem;
+  background: white;
+  border: 1px solid #ececec;
+  border-radius: 12px;
+}
+
+.welcome-step h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.welcome-step p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #5b6472;
+}
+
+.welcome-step-num {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #eef3ff;
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.welcome-section-title {
+  margin: 0 0 1rem;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+}
+
+.welcome-tutor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 1.1rem;
+}
+
+.welcome-tutor-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.3rem;
+  background: white;
+  border: 1px solid #ececec;
+  border-radius: 14px;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.welcome-tutor-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
+}
+
+.welcome-tutor-head {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.welcome-tutor-head h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.welcome-tutor-school {
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+  color: #5b6472;
+}
+
+.welcome-tutor-subjects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.subject-pill {
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: #eef3ff;
+  color: #1d4ed8;
+}
+
+.welcome-tutor-bio {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #374151;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.welcome-tutor-foot {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f1f1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.welcome-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #ececec;
+  font-size: 0.9rem;
+  color: #5b6472;
+}
+
+@media (max-width: 640px) {
+  .welcome {
+    padding: 1.25rem 1rem 2rem;
+    gap: 1.75rem;
+  }
+
+  .welcome-hero {
+    padding: 2rem 1.4rem;
+  }
+
+  .welcome-actions .btn {
+    flex: 1 1 auto;
+  }
+}
+
+/* --- Tutor profile: public profile panel --- */
+
+.profile-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.profile-photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.profile-bio {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
 }

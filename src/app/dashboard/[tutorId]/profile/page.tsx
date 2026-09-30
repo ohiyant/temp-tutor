@@ -3,6 +3,7 @@ import { requireTutorPage } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import ProfileManager from "./ProfileManager";
 import RemoveTutor from "./RemoveTutor";
+import { colorForTutor } from "@/lib/tutorColor";
 
 /** Rate & subjects tab: rate, session types, subjects, contact and timezone. */
 export default async function ProfilePage({
@@ -40,6 +41,10 @@ export default async function ProfilePage({
       initialOnlineAvailable={tutor.onlineAvailable}
       initialInPersonAvailable={tutor.inPersonAvailable}
       initialTimeZone={tutor.timeZone}
+      initialPhoto={tutor.photo}
+      initialSchool={tutor.school ?? ""}
+      initialBio={tutor.bio ?? ""}
+      color={colorForTutor(tutor.id)}
       extraPanel={
         user.isAdmin ? (
           <RemoveTutor

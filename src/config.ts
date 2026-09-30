@@ -6,8 +6,9 @@
  */
 export const CONFIG = {
   // The site's name, used in page titles, emails and sign-in pages.
-  // "TutorSpot" is a placeholder until a real name is chosen.
   SITE_NAME: "UCR Tutoring",
+  // One line under the name on the welcome page.
+  SITE_TAGLINE: "One-on-one tutoring, online or in person. Pick a subject, choose a time that works, and you're booked.",
 
   // Scheduling granularity
   START_TIME_INCREMENT_MIN: 15,
