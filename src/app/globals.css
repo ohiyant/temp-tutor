@@ -2038,20 +2038,27 @@ body:has(.fit-calendar) .tab-area {
   letter-spacing: -0.01em;
 }
 
+/* Two cards per row; one on narrow screens. */
 .welcome-tutor-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-  gap: 1.1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.4rem;
+}
+
+@media (max-width: 720px) {
+  .welcome-tutor-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .welcome-tutor-card {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
-  padding: 1.3rem;
+  gap: 1rem;
+  padding: 1.75rem;
   background: white;
   border: 1px solid #ececec;
-  border-radius: 14px;
+  border-radius: 16px;
   transition: box-shadow 0.15s, transform 0.15s;
 }
 
@@ -2063,18 +2070,12 @@ body:has(.fit-calendar) .tab-area {
 .welcome-tutor-head {
   display: flex;
   align-items: center;
-  gap: 0.9rem;
+  gap: 1.25rem;
 }
 
 .welcome-tutor-head h3 {
   margin: 0;
-  font-size: 1.1rem;
-}
-
-.welcome-tutor-school {
-  margin: 0.15rem 0 0;
-  font-size: 0.88rem;
-  color: #5b6472;
+  font-size: 1.3rem;
 }
 
 .welcome-tutor-subjects {
@@ -2092,15 +2093,13 @@ body:has(.fit-calendar) .tab-area {
   color: #1d4ed8;
 }
 
+/* The tutor's own words, shown in full (up to 500 characters) with their line breaks. */
 .welcome-tutor-bio {
   margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.55;
+  font-size: 0.95rem;
+  line-height: 1.6;
   color: #374151;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  white-space: pre-line;
 }
 
 .welcome-tutor-foot {

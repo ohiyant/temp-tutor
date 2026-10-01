@@ -8,7 +8,7 @@ export const CONFIG = {
   // The site's name, used in page titles, emails and sign-in pages.
   SITE_NAME: "UCR Tutoring",
   // One line under the name on the welcome page.
-  SITE_TAGLINE: "One-on-one tutoring, online or in person. Pick a subject, choose a time that works, and you're booked.",
+  SITE_TAGLINE: "We priortize understanding and learning over grades. At UCR Tutoring, we believe that grades follow from having a true creative mastery of a subject.",
 
   // Scheduling granularity
   START_TIME_INCREMENT_MIN: 15,

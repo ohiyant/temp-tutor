@@ -23,7 +23,6 @@ const patchSchema = z.object({
     .max(400_000, "That photo is too large.")
     .nullable()
     .optional(),
-  school: z.string().trim().max(100).nullable().optional(),
   bio: z.string().trim().max(500, "Keep the bio under 500 characters.").nullable().optional(),
   inPersonLocation: z.string().trim().max(200, "Keep the location under 200 characters.").nullable().optional(),
   meetingLink: z

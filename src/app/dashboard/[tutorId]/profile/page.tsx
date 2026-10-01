@@ -36,7 +36,6 @@ export default async function ProfilePage(
       initialInPersonAvailable={tutor.inPersonAvailable}
       initialTimeZone={tutor.timeZone}
       initialPhoto={tutor.photo}
-      initialSchool={tutor.school ?? ""}
       initialBio={tutor.bio ?? ""}
       initialInPersonLocation={tutor.inPersonLocation ?? ""}
       initialMeetingLink={tutor.meetingLink ?? ""}

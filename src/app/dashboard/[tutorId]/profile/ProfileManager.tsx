@@ -26,7 +26,6 @@ export default function ProfileManager({
   initialInPersonAvailable,
   initialTimeZone,
   initialPhoto,
-  initialSchool,
   initialBio,
   initialInPersonLocation,
   initialMeetingLink,
@@ -46,7 +45,6 @@ export default function ProfileManager({
   initialInPersonAvailable: boolean;
   initialTimeZone: string;
   initialPhoto: string | null;
-  initialSchool: string;
   initialBio: string;
   initialInPersonLocation: string;
   initialMeetingLink: string;
@@ -62,7 +60,6 @@ export default function ProfileManager({
   const [inPerson, setInPerson] = useState(initialInPersonAvailable);
   const [timeZone, setTimeZone] = useState(initialTimeZone);
   const [photo, setPhoto] = useState<string | null>(initialPhoto);
-  const [school, setSchool] = useState(initialSchool);
   const [bio, setBio] = useState(initialBio);
   const [inPersonLocation, setInPersonLocation] = useState(initialInPersonLocation);
   const [meetingLink, setMeetingLink] = useState(initialMeetingLink);
@@ -119,7 +116,6 @@ export default function ProfileManager({
           ...(isAdmin ? { name: name.trim(), email: email.trim() } : {}),
           phone: phone || null,
           photo,
-          school: school.trim() || null,
           bio: bio.trim() || null,
           inPersonLocation: inPersonLocation.trim() || null,
           meetingLink: meetingLink.trim() || null,
@@ -168,17 +164,7 @@ export default function ProfileManager({
             </div>
           </div>
           {photoError && <p className="error-text">{photoError}</p>}
-          <div className="form-field" style={{ margin: "0.8rem 0 0.6rem" }}>
-            <label htmlFor="tutor-school">School</label>
-            <input
-              id="tutor-school"
-              value={school}
-              maxLength={100}
-              onChange={(e) => setSchool(e.target.value)}
-              placeholder="e.g. UC Riverside, Computer Science"
-            />
-          </div>
-          <div className="form-field">
+          <div className="form-field" style={{ marginTop: "0.8rem" }}>
             <label htmlFor="tutor-bio">
               About you ({bio.length}/{BIO_MAX})
             </label>
@@ -188,7 +174,7 @@ export default function ProfileManager({
               maxLength={BIO_MAX}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="A sentence or two about how you teach and what you like helping with."
+              placeholder="Shown under your name on the home page: your school or major, how you teach, what you like helping with…"
               className="profile-bio"
             />
           </div>

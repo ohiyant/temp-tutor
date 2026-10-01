@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { CONFIG } from "@/config";
@@ -25,9 +24,8 @@ function SiteTitle({ name }: { name: string }) {
 
 /** Welcome page: what the site is, and who the tutors are. */
 export default async function HomePage() {
-  // A signed-in tutor goes to their own schedule instead of the student landing page.
+  // Signed-in tutors see a button to their schedule instead of the student buttons.
   const user = await getCurrentUser();
-  if (user?.tutor) redirect(`/dashboard/${user.tutor.id}`);
 
   const tutors = await prisma.tutor.findMany({
     // Only tutors students can actually book (they teach at least one subject).
@@ -45,18 +43,26 @@ export default async function HomePage() {
         </h1>
         <p className="welcome-tagline">{CONFIG.SITE_TAGLINE}</p>
         <div className="welcome-actions">
-          <Link href="/book" className="btn btn-primary btn-large">
-            Book a session
-          </Link>
-          <Link href="/my-bookings" className="btn btn-secondary btn-large">
-            My bookings
-          </Link>
+          {user?.tutor ? (
+            <Link href={`/dashboard/${user.tutor.id}`} className="btn btn-primary btn-large">
+              My schedule
+            </Link>
+          ) : (
+            <>
+              <Link href="/book" className="btn btn-primary btn-large">
+                Book a session
+              </Link>
+              <Link href="/my-bookings" className="btn btn-secondary btn-large">
+                My bookings
+              </Link>
+            </>
+          )}
         </div>
       </HeroShine>
 
       {tutors.length > 0 && (
         <section className="welcome-tutors">
-          <h2 className="welcome-section-title">Meet the tutors</h2>
+          <h2 className="welcome-section-title">Tutors</h2>
           <div className="welcome-tutor-grid">
             {tutors.map((t) => {
               const firstName = t.name.split(" ")[0];
@@ -64,12 +70,10 @@ export default async function HomePage() {
               return (
                 <article key={t.id} className="welcome-tutor-card">
                   <div className="welcome-tutor-head">
-                    <TutorAvatar name={t.name} photo={t.photo} color={colorForTutor(t.id)} size={64} />
-                    <div>
-                      <h3>{t.name}</h3>
-                      {t.school && <p className="welcome-tutor-school">{t.school}</p>}
-                    </div>
+                    <TutorAvatar name={t.name} photo={t.photo} color={colorForTutor(t.id)} size={120} />
+                    <h3>{t.name}</h3>
                   </div>
+                  {t.bio && <p className="welcome-tutor-bio">{t.bio}</p>}
                   <div className="welcome-tutor-subjects">
                     {t.subjects.map((s) => (
                       <span key={s.subjectId} className="subject-pill">
@@ -77,7 +81,6 @@ export default async function HomePage() {
                       </span>
                     ))}
                   </div>
-                  {t.bio && <p className="welcome-tutor-bio">{t.bio}</p>}
                   <div className="welcome-tutor-foot">
                     <span className="muted small">{modes}</span>
                     <Link
