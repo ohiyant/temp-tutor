@@ -7,7 +7,7 @@ import { sendEmail } from "@/lib/email";
 import type { BusyRange } from "@/lib/availability";
 import { formatDateTime, isValidTimeZone } from "@/lib/timezone";
 import { appUrl, cancelPath, newManageToken, reschedulePath } from "@/lib/manageLinks";
-import { manageLinksText } from "@/lib/sessionEmails";
+import { manageLinksText, meetingLinkFallbackLine } from "@/lib/sessionEmails";
 import { sessionPlace, sessionPlaceLine, tutorContactLine } from "@/lib/sessionPlace";
 import { DAY_MS as ONE_DAY_MS, HOUR_MS, clientIp, rateLimit } from "@/lib/rateLimit";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -332,6 +332,7 @@ async function sendConfirmationEmails(
     "",
     // One contact line per tutor in this booking.
     ...created.tutors.filter((t) => created.sessions.some((s) => s.tutorId === t.id)).map(tutorContactLine),
+    ...(created.sessions.some((s) => s.mode === "online") ? [meetingLinkFallbackLine()] : []),
     "Have homework, notes or practice problems you'd like to go over? Reply to this email with them before the session so your tutor can take a look.",
     "",
     `Need to change plans? You can reschedule up to ${CONFIG.RESCHEDULE_MIN_NOTICE_HOURS} hours before, or cancel any time before the session.`,

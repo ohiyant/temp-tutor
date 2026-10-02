@@ -346,7 +346,12 @@ export default function BookingCalendar() {
   const subjectName = subjects.find((s) => s.id === subjectId)?.name ?? "";
 
   const allTutorsForFilter = calendarData?.tutors ?? [];
-  const visibleTutors = filterTutorId
+  // With just one tutor for this subject, "Any tutor" means the same thing, so
+  // the picker shows only them.
+  const onlyTutor = allTutorsForFilter.length === 1 ? allTutorsForFilter[0] : null;
+  const visibleTutors = onlyTutor
+    ? [onlyTutor]
+    : filterTutorId
     ? allTutorsForFilter.filter((t) => t.tutorId === filterTutorId)
     : allTutorsForFilter;
 
@@ -661,8 +666,11 @@ export default function BookingCalendar() {
             </div>
             <div className="form-field">
               <label>Tutor</label>
-              <select value={filterTutorId} onChange={(e) => setFilterTutorId(e.target.value)}>
-                <option value="">Any tutor</option>
+              <select
+                value={onlyTutor ? onlyTutor.tutorId : filterTutorId}
+                onChange={(e) => setFilterTutorId(e.target.value)}
+              >
+                {!onlyTutor && <option value="">Any tutor</option>}
                 {allTutorsForFilter.map((t) => (
                   <option key={t.tutorId} value={t.tutorId}>
                     {t.tutorName}
@@ -918,8 +926,7 @@ export default function BookingCalendar() {
                           background: hexToRgba(drag.tutor.color, 0.85),
                         }}
                       >
-                        {fmtTime(drag.startAt.toISOString(), timeZone)} · {drag.durationMin} min ·{" "}
-                        {fmtPrice(sessionPriceCents(drag.tutor.hourlyRateCents, drag.durationMin))}
+                        {fmtTime(drag.startAt.toISOString(), timeZone)} · {drag.durationMin} min
                       </div>
                     )}
                   </div>
@@ -937,7 +944,7 @@ export default function BookingCalendar() {
                   : coarsePointer
                   ? `Tap a free block to add a ${CONFIG.DEFAULT_SESSION_LENGTH_MIN}-minute session. You can change the length on the next step.`
                   : `Click a free block to add a ${CONFIG.DEFAULT_SESSION_LENGTH_MIN}-minute session, or drag down to choose the length. You can add several.`
-                : `${selections.length} session${selections.length === 1 ? "" : "s"} selected · ${fmtPrice(totalCents)}`}
+                : `${selections.length} session${selections.length === 1 ? "" : "s"} selected`}
             </span>
             {selections.length > 0 && (
               <button onClick={() => setSelections([])} style={{ background: "#e5e5e5", color: "#333" }}>

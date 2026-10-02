@@ -33,7 +33,7 @@ export default function CancelForm({ token }: { token: string }) {
     return (
       <div className="manage-done">
         <p>
-          <strong>Your session is cancelled.</strong> We&apos;ve emailed you and your tutor.
+          <strong>Your session is cancelled.</strong> We&apos;ve let your tutor know.
         </p>
         <p>
           <a href="/book">Book another session →</a>

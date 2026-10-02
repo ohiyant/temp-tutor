@@ -34,6 +34,11 @@ function studentZone(s: SessionForEmail): string {
   return isValidTimeZone(s.timezone) ? s.timezone : s.tutor.timeZone;
 }
 
+/** For emails with an online session: where to find the tutor's current link if the emailed one stops working. */
+export function meetingLinkFallbackLine(): string {
+  return `If the meeting link doesn't work, the latest one is always on your My bookings page: ${appUrl()}/my-bookings`;
+}
+
 /** The two self-service links, for the bottom of a student email. */
 export function manageLinksText(s: { cancellationToken: string; rescheduleToken: string }): string[] {
   return [
@@ -54,45 +59,43 @@ export async function sendCancellationEmails(
   const byWhom = { admin: " by an admin", student: " by the student", tutor: "" }[cancelledBy];
 
   const studentLead =
-    cancelledBy === "student"
-      ? `You cancelled your ${s.subject.name} session with ${s.tutor.name} on ${studentWhen} (${s.durationMin} min).`
-      : cancelledBy === "tutor"
+    cancelledBy === "tutor"
       ? `${s.tutor.name} had to cancel your ${s.subject.name} session on ${studentWhen} (${s.durationMin} min).`
       : `Your ${s.subject.name} session with ${s.tutor.name} on ${studentWhen} (${s.durationMin} min) has been cancelled.`;
 
+  // Nobody is emailed about a cancellation they made themselves (they've
+  // already seen it on screen); only the other side hears about it.
   await Promise.all([
-    sendEmail(
-      s.studentEmail,
-      `Cancelled: ${s.subject.name} on ${studentWhen}`,
-      [
-        `Hi ${s.studentName},`,
-        "",
-        studentLead,
-        ...(reason ? ["", `Message from ${cancelledBy === "tutor" ? s.tutor.name : CONFIG.SITE_NAME}:`, reason] : []),
-        ...(refundNote ? ["", refundNote] : []),
-        "",
-        cancelledBy === "student"
-          ? "You're welcome to book again any time."
-          : "Sorry for the inconvenience. You're welcome to book another time.",
-        tutorContactLine(s.tutor),
-        "",
-        CONFIG.SITE_NAME,
-      ].join("\n"),
-      s.tutor.email
-    ),
-    sendEmail(
-      s.tutor.email,
-      `Cancelled: ${s.subject.name} with ${s.studentName}`,
-      [
-        `Hi ${s.tutor.name},`,
-        "",
-        cancelledBy === "tutor"
-          ? `You cancelled the ${s.subject.name} session with ${s.studentName} on ${tutorWhen} (${s.durationMin} min). They've been emailed.`
-          : `The ${s.subject.name} session with ${s.studentName} on ${tutorWhen} (${s.durationMin} min) has been cancelled${byWhom}.`,
-        ...(reason && cancelledBy === "admin" ? ["", "Note sent to the student:", reason] : []),
-      ].join("\n"),
-      s.studentEmail
-    ),
+    cancelledBy !== "student" &&
+      sendEmail(
+        s.studentEmail,
+        `Cancelled: ${s.subject.name} on ${studentWhen}`,
+        [
+          `Hi ${s.studentName},`,
+          "",
+          studentLead,
+          ...(reason ? ["", `Message from ${cancelledBy === "tutor" ? s.tutor.name : CONFIG.SITE_NAME}:`, reason] : []),
+          ...(refundNote ? ["", refundNote] : []),
+          "",
+          "Sorry for the inconvenience. You're welcome to book another time.",
+          tutorContactLine(s.tutor),
+          "",
+          CONFIG.SITE_NAME,
+        ].join("\n"),
+        s.tutor.email
+      ),
+    cancelledBy !== "tutor" &&
+      sendEmail(
+        s.tutor.email,
+        `Cancelled: ${s.subject.name} with ${s.studentName}`,
+        [
+          `Hi ${s.tutor.name},`,
+          "",
+          `The ${s.subject.name} session with ${s.studentName} on ${tutorWhen} (${s.durationMin} min) has been cancelled${byWhom}.`,
+          ...(reason && cancelledBy === "admin" ? ["", "Note sent to the student:", reason] : []),
+        ].join("\n"),
+        s.studentEmail
+      ),
   ]);
 }
 
@@ -112,6 +115,7 @@ export async function sendRescheduleEmails(oldStartAt: Date, s: SessionForEmail)
         `  ${sessionPlaceLine(s.mode, s.tutor, s.location)}`,
         "",
         tutorContactLine(s.tutor),
+        ...(s.mode === "online" ? [meetingLinkFallbackLine()] : []),
         "",
         "Need to change it again?",
         ...manageLinksText(s),

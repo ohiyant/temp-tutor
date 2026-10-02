@@ -207,7 +207,8 @@ export default function ProfileManager({
               />
               <span className="muted small">
                 Sent only to students who book an online session with you. Use a link that stays the same, like
-                your Zoom personal meeting room.
+                your Zoom personal meeting room. If you change it, students see the new one on their My bookings
+                page.
               </span>
             </div>
           )}
