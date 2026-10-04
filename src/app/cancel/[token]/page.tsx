@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { CONFIG } from "@/config";
 import { cancellationRefundPct, canReschedule } from "@/lib/policy";
 import { reschedulePath } from "@/lib/manageLinks";
 import { formatDateTime, isValidTimeZone } from "@/lib/timezone";
@@ -55,6 +54,8 @@ export default async function CancelPage(props: { params: Promise<{ token: strin
   }
 
   const refundPct = cancellationRefundPct(session.startAt, now);
+  const paidOnline = Boolean(session.stripePaymentIntentId);
+  const refundCents = Math.round(session.priceCents * refundPct);
   return (
     <ManageShell title="Cancel your session">
       <SessionSummary
@@ -67,12 +68,11 @@ export default async function CancelPage(props: { params: Promise<{ token: strin
         mode={session.mode}
       />
       <p className="manage-policy">
-        {refundPct > 0
-          ? `You're cancelling more than ${CONFIG.CANCEL_NOTICE_THRESHOLD_HOURS} hours ahead, so ${Math.round(
-              refundPct * 100
-            )}% of the price is refundable.`
-          : `You're cancelling ${CONFIG.CANCEL_NOTICE_THRESHOLD_HOURS} hours or less before the session, so it isn't refundable.`}{" "}
-        Online payment isn&apos;t set up yet, so you haven&apos;t been charged.
+        {!paidOnline
+          ? "This session wasn't paid for online, so there's nothing to refund."
+          : `You'll get ${Math.round(refundPct * 100)}% back: $${(refundCents / 100).toFixed(
+              2
+            )} to your card, within 5–10 business days.`}
       </p>
       {canReschedule(session.startAt, now) && (
         <p className="muted small">

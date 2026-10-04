@@ -1836,12 +1836,6 @@ body:has(.fit-calendar) .tab-area {
   color: #991b1b;
 }
 
-.done-my-bookings {
-  align-self: center;
-  color: #2563eb;
-  font-size: 0.9rem;
-}
-
 /* A tutor's hours that exist but can't be booked (inside their minimum
    notice, or too far ahead): faint stripes with the tutor's color on the left. */
 .calendar-block.unbookable {
@@ -2324,4 +2318,15 @@ body:has(.calendar-mode) .site-footer {
 /* Main content takes the spare height, so the footer sits at the bottom. */
 main {
   flex: 1 0 auto;
+}
+
+/* Booking page: a one-off note above the calendar (e.g. after backing out of payment). */
+.booking-notice {
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+  font-size: 0.88rem;
 }

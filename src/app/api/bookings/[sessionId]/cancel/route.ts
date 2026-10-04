@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { sendCancellationEmails } from "@/lib/sessionEmails";
+import { refundNote, refundSession } from "@/lib/checkout";
 
 const bodySchema = z.object({
   /** Optional note to the student, included in their email. */
@@ -14,10 +15,9 @@ const bodySchema = z.object({
  * admin, cancels a booked session.
  *
  * The session is kept with status `cancelled` (so there's a record), which
- * frees the slot on the booking calendar. Student and tutor are emailed.
+ * frees the slot on the booking calendar. Whoever didn't cancel is emailed.
  *
- * PAYMENT: no refund is issued yet — payments aren't built. When Stripe is
- * added, refund in full here (the student didn't choose to cancel).
+ * If the student paid online, they get a full refund (they didn't choose to cancel).
  */
 export async function POST(req: NextRequest, props: { params: Promise<{ sessionId: string }> }) {
   const params = await props.params;
@@ -53,8 +53,27 @@ export async function POST(req: NextRequest, props: { params: Promise<{ sessionI
     where: { id: params.sessionId },
     include: { tutor: true, subject: true },
   });
-  // Someone who is both admin and the session's tutor is cancelling as the tutor.
-  await sendCancellationEmails(session, isOwnTutor ? "tutor" : "admin", undefined, parsed.data.reason || undefined);
 
-  return NextResponse.json({ ok: true });
+  let refundedCents: number;
+  try {
+    refundedCents = await refundSession(session, 1);
+  } catch (err) {
+    // Keep the booking as it was, so it can be tried again (the refund can't happen twice).
+    console.error(`Refund for session ${session.id} failed:`, err);
+    await prisma.session.update({ where: { id: session.id }, data: { status: "confirmed" } });
+    return NextResponse.json(
+      { error: "Couldn't refund the student, so the session wasn't cancelled. Try again." },
+      { status: 502 }
+    );
+  }
+
+  // Someone who is both admin and the session's tutor is cancelling as the tutor.
+  await sendCancellationEmails(
+    session,
+    isOwnTutor ? "tutor" : "admin",
+    refundedCents > 0 ? refundNote(refundedCents) : undefined,
+    parsed.data.reason || undefined
+  );
+
+  return NextResponse.json({ ok: true, refundedCents });
 }

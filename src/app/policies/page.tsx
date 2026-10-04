@@ -3,7 +3,7 @@ import { CONFIG } from "@/config";
 
 export const metadata = { title: "Policies" };
 
-const LAST_UPDATED = "September 30, 2026";
+const LAST_UPDATED = "October 1, 2026";
 
 /**
  * Cancellation and rescheduling rules, in plain language.
@@ -12,7 +12,6 @@ const LAST_UPDATED = "September 30, 2026";
  */
 export default function PoliciesPage() {
   const pct = (share: number) => `${Math.round(share * 100)}%`;
-  const cutoff = CONFIG.CANCEL_NOTICE_THRESHOLD_HOURS;
 
   return (
     <div className="container policies">
@@ -33,20 +32,8 @@ export default function PoliciesPage() {
             <Link href="/my-bookings">My bookings</Link>.
           </li>
           <li>
-            More than {cutoff} hours before your session: you get <strong>{pct(CONFIG.CANCEL_REFUND_PCT_GT_24H)}</strong>{" "}
-            of what you paid back.
-          </li>
-          <li>
-            {cutoff} hours or less before:{" "}
-            {CONFIG.CANCEL_REFUND_PCT_LTE_24H > 0 ? (
-              <>
-                you get <strong>{pct(CONFIG.CANCEL_REFUND_PCT_LTE_24H)}</strong> back.
-              </>
-            ) : (
-              <>
-                <strong>no refund</strong>.
-              </>
-            )}
+            Cancel any time before your session and you get <strong>{pct(CONFIG.CANCEL_REFUND_PCT)}</strong> of what
+            you paid back, to your card within 5–10 business days.
           </li>
           <li>
             If your tutor or we cancel a session, you get a <strong>full refund</strong>, and we&apos;ll email you.

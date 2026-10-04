@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { cancellationRefundPct } from "@/lib/policy";
 import { sendCancellationEmails } from "@/lib/sessionEmails";
+import { refundSession } from "@/lib/checkout";
 
 const bodySchema = z.object({ token: z.string().min(1) });
 
@@ -10,8 +11,8 @@ const bodySchema = z.object({ token: z.string().min(1) });
  * POST /api/manage/cancel — a student cancels their session with the
  * cancel link from their email. No sign-in: the token is the permission.
  *
- * PAYMENT: nothing is refunded yet, since nothing was charged. When Stripe
- * is added, refund `refundPct` of the price here.
+ * If they paid online, `refundPct` of the price (from the cancellation
+ * policy) goes back to their card.
  */
 export async function POST(req: NextRequest) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
@@ -38,7 +39,19 @@ export async function POST(req: NextRequest) {
   }
 
   const refundPct = cancellationRefundPct(session.startAt, now);
+  let refundedCents: number;
+  try {
+    refundedCents = await refundSession(session, refundPct);
+  } catch (err) {
+    // Keep the booking as it was, so they can try again (the refund can't happen twice).
+    console.error(`Refund for session ${session.id} failed:`, err);
+    await prisma.session.update({ where: { id: session.id }, data: { status: "confirmed" } });
+    return NextResponse.json(
+      { error: "We couldn't process your refund, so the session wasn't cancelled. Please try again." },
+      { status: 502 }
+    );
+  }
   await sendCancellationEmails(session, "student");
 
-  return NextResponse.json({ ok: true, refundPct });
+  return NextResponse.json({ ok: true, refundPct, refundedCents });
 }

@@ -5,12 +5,14 @@ const now = new Date("2026-10-01T12:00:00.000Z");
 const inHours = (h: number) => new Date(now.getTime() + h * 60 * 60 * 1000);
 
 describe("cancellationRefundPct", () => {
-  it("refunds 50% more than 24 hours ahead", () => {
-    expect(cancellationRefundPct(inHours(25), now)).toBe(0.5);
+  it("refunds 75% at any time before the session", () => {
+    expect(cancellationRefundPct(inHours(100), now)).toBe(0.75);
+    expect(cancellationRefundPct(inHours(24), now)).toBe(0.75);
+    expect(cancellationRefundPct(inHours(0.5), now)).toBe(0.75);
   });
-  it("refunds nothing at 24 hours or less", () => {
-    expect(cancellationRefundPct(inHours(24), now)).toBe(0);
-    expect(cancellationRefundPct(inHours(2), now)).toBe(0);
+  it("refunds nothing once it has started", () => {
+    expect(cancellationRefundPct(inHours(0), now)).toBe(0);
+    expect(cancellationRefundPct(inHours(-1), now)).toBe(0);
   });
 });
 

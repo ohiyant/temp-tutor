@@ -513,8 +513,8 @@ export function SessionDetails({
                 />
               </div>
               <p className="small">
-                {s.studentName} and the tutor will be emailed, with your message if you add one. No refund is issued
-                yet, since payments aren&apos;t set up.
+                {s.studentName} will be emailed, with your message if you add one. If they paid online, they get a
+                full refund to their card.
               </p>
               <div className="form-row" style={{ marginBottom: 0 }}>
                 <button className="danger" disabled={busy} onClick={cancel}>

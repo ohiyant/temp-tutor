@@ -120,7 +120,11 @@ model Session {
   priceCents   Int
   status       SessionStatus @default(pending_payment)
 
+  // Stripe: the payment (refunds go against it), and the checkout this
+  // session was paid in. Sessions booked together share a bookingRef; they
+  // stay pending_payment, with BookingHolds on their times, until paid.
   stripePaymentIntentId String?
+  bookingRef            String?
   // In-person sessions: where to meet, chosen by the student when booking
   // (prefilled with the tutor's usual spot). Null for online sessions.
   location     String?  @db.VarChar(200)
@@ -137,6 +141,7 @@ model Session {
 
   @@index([tutorId, startAt, endAt])
   @@index([studentEmail, startAt, endAt])
+  @@index([bookingRef])
 }
 
 // Temporary lock on a slot while a student is in Stripe Checkout,
@@ -147,11 +152,13 @@ model BookingHold {
   startAt                DateTime
   endAt                  DateTime
   expiresAt              DateTime
-  stripeCheckoutSessionId String  @unique
+  // The pending booking this slot is held for (Session.bookingRef).
+  bookingRef             String
 
   tutor Tutor @relation(fields: [tutorId], references: [id])
 
   @@index([tutorId, startAt, endAt])
+  @@index([bookingRef])
 }
 
 // ---------- Tutor/admin sign-in (emailed magic links) ----------

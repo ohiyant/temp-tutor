@@ -6,6 +6,7 @@ export default function CancelForm({ token }: { token: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [refundedCents, setRefundedCents] = useState(0);
 
   async function cancel() {
     setBusy(true);
@@ -21,6 +22,7 @@ export default function CancelForm({ token }: { token: string }) {
         setError(body?.error ?? "Couldn't cancel. Try again.");
         return;
       }
+      setRefundedCents(body?.refundedCents ?? 0);
       setDone(true);
     } catch {
       setError("Couldn't reach the server. Check your connection and try again.");
@@ -34,6 +36,8 @@ export default function CancelForm({ token }: { token: string }) {
       <div className="manage-done">
         <p>
           <strong>Your session is cancelled.</strong> We&apos;ve let your tutor know.
+          {refundedCents > 0 &&
+            ` $${(refundedCents / 100).toFixed(2)} is on its way back to your card (5–10 business days).`}
         </p>
         <p>
           <a href="/book">Book another session →</a>

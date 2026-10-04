@@ -125,6 +125,8 @@ export async function POST(req: NextRequest) {
             timezone: old.timezone,
             durationMin: old.durationMin,
             priceCents: old.priceCents,
+            // Same payment: cancelling the moved session refunds against it.
+            stripePaymentIntentId: old.stripePaymentIntentId,
             status: "confirmed",
             cancellationToken: newManageToken(),
             rescheduleToken: newManageToken(),

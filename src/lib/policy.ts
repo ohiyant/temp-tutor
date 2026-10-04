@@ -12,11 +12,9 @@ export function hoursUntil(startAt: Date, now: Date): number {
   return (startAt.getTime() - now.getTime()) / HOUR_MS;
 }
 
-/** Share of the price refunded when the student cancels now (0–1). */
+/** Share of the price refunded when the student cancels now (0–1): the same at any time before the session. */
 export function cancellationRefundPct(startAt: Date, now: Date): number {
-  return hoursUntil(startAt, now) > CONFIG.CANCEL_NOTICE_THRESHOLD_HOURS
-    ? CONFIG.CANCEL_REFUND_PCT_GT_24H
-    : CONFIG.CANCEL_REFUND_PCT_LTE_24H;
+  return startAt > now ? CONFIG.CANCEL_REFUND_PCT : 0;
 }
 
 /** Students can move a session only while it's more than RESCHEDULE_MIN_NOTICE_HOURS away. */

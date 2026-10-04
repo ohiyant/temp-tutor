@@ -52,6 +52,8 @@ import MonthGrid, { type MonthItem } from "@/components/MonthGrid";
 import { localTimeZone } from "@/lib/timezone";
 import TimeZoneSelect from "@/components/TimeZoneSelect";
 import CalendarNav from "@/components/CalendarNav";
+import BookingConfirmation from "@/components/BookingConfirmation";
+import type { BookingResult } from "@/lib/bookingResult";
 
 // ---------- Types matching /api/calendar's response ----------
 
@@ -207,32 +209,24 @@ function dragPreviewPosition(drag: DragState, date: string, timeZone: string, px
   return seg ? { top: seg.top, height: seg.height } : { display: "none" };
 }
 
-interface BookingResult {
-  subjectName: string;
-  totalCents: number;
-  sessions: {
-    id: string;
-    tutorName: string;
-    startAt: string;
-    endAt: string;
-    durationMin: number;
-    mode: SessionMode;
-    priceCents: number;
-    cancelPath: string;
-    reschedulePath: string;
-    place: { label: string; text: string; href?: string };
-    tutorEmail: string;
-  }[];
-}
+/** Remembers the open Stripe checkout, so coming back without paying can cancel it. */
+const PENDING_CHECKOUT_KEY = "pendingCheckout";
 
 interface HoverState {
   date: string;
   startAt: string; // ISO
 }
 
-export default function BookingCalendar() {
+export default function BookingCalendar({
+  paymentsEnabled,
+}: {
+  /** Stripe is on: "Confirm booking" goes to Stripe's payment page. */
+  paymentsEnabled: boolean;
+}) {
   const [step, setStep] = useState<Step>("calendar");
   const [error, setError] = useState<string | null>(null);
+  /** A one-off message above the calendar, e.g. after backing out of payment. */
+  const [notice, setNotice] = useState<string | null>(null);
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [subjectId, setSubjectId] = useState<string>("");
@@ -296,7 +290,50 @@ export default function BookingCalendar() {
     setCoarsePointer(window.matchMedia("(pointer: coarse)").matches);
     // Phones: 3 days fit on screen; 7 would need sideways scrolling.
     if (window.innerWidth < 640) setCalendarDays(3);
+
+    // Back from Stripe without paying, by its "back" link: free the times held for them.
+    const bookingRef = query.get("checkout") === "cancelled" ? query.get("ref") : null;
+    if (bookingRef) {
+      window.history.replaceState(null, "", window.location.pathname);
+      releasePendingCheckout(bookingRef);
+    }
+
+    // ...or by the browser's Back button, which can restore this page as it
+    // was (button still saying "Opening payment…").
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (!e.persisted) return;
+      setSubmitting(false);
+      releasePendingCheckout(null);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** Cancels the checkout this page opened (if any) and frees its held times. */
+  function releasePendingCheckout(bookingRef: string | null) {
+    let checkoutId: string | undefined;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(PENDING_CHECKOUT_KEY) ?? "null");
+      if (saved && (!bookingRef || saved.bookingRef === bookingRef)) {
+        bookingRef = saved.bookingRef;
+        checkoutId = saved.checkoutId;
+      }
+      sessionStorage.removeItem(PENDING_CHECKOUT_KEY);
+    } catch {
+      // Storage unavailable; releasing by bookingRef alone still works.
+    }
+    if (!bookingRef) return;
+    setNotice("Payment cancelled, so nothing was booked or charged. Pick your times again whenever you're ready.");
+    setStep("calendar");
+    fetch("/api/bookings/release", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingRef, checkoutId }),
+    })
+      .catch(() => {})
+      .finally(() => setReloadKey((k) => k + 1));
+  }
 
   useEffect(() => {
     fetch("/api/subjects")
@@ -570,6 +607,19 @@ export default function BookingCalendar() {
         }),
       });
       const body = await res.json().catch(() => null);
+      if (res.ok && body?.checkoutUrl) {
+        // Off to Stripe. Keep the button disabled while the page changes.
+        try {
+          sessionStorage.setItem(
+            PENDING_CHECKOUT_KEY,
+            JSON.stringify({ bookingRef: body.bookingRef, checkoutId: body.checkoutId })
+          );
+        } catch {
+          // Not essential (see the release on return).
+        }
+        window.location.assign(body.checkoutUrl);
+        return;
+      }
       if (!res.ok) {
         // The bot-check pass was used up by this attempt; get a fresh one for a retry.
         setTurnstileToken(null);
@@ -583,9 +633,9 @@ export default function BookingCalendar() {
       setSelections([]);
       setReloadKey((k) => k + 1);
       setStep("done");
+      setSubmitting(false);
     } catch {
       setBookingError("Couldn't reach the server. Check your connection and try again.");
-    } finally {
       setSubmitting(false);
     }
   }
@@ -633,6 +683,7 @@ export default function BookingCalendar() {
     <div className={`container-wide ${step === "calendar" ? "calendar-mode" : ""}`}>
       <h1>Book Sessions</h1>
       {error && <p className="error-text">{error}</p>}
+      {notice && step === "calendar" && <p className="booking-notice">{notice}</p>}
 
       {step === "calendar" && (
         <>
@@ -1119,9 +1170,8 @@ export default function BookingCalendar() {
 
           <div style={{ marginTop: "1rem", fontSize: "0.85rem", color: "#555" }}>
             <p>
-              <strong>Cancellation policy:</strong> more than {CONFIG.CANCEL_NOTICE_THRESHOLD_HOURS} hours before your
-              session, {CONFIG.CANCEL_REFUND_PCT_GT_24H * 100}% refund. {CONFIG.CANCEL_NOTICE_THRESHOLD_HOURS} hours
-              or less before, {CONFIG.CANCEL_REFUND_PCT_LTE_24H * 100}% refund.
+              <strong>Cancellation policy:</strong> cancel any time before your session for a{" "}
+              {Math.round(CONFIG.CANCEL_REFUND_PCT * 100)}% refund.
             </p>
             <p>
               <strong>Rescheduling policy:</strong> free, up to {CONFIG.RESCHEDULE_MIN_NOTICE_HOURS} hours before your
@@ -1153,7 +1203,13 @@ export default function BookingCalendar() {
               disabled={submitting || !agreed || (turnstileOn && !turnstileToken)}
               title={!agreed ? "Agree to the policies first" : undefined}
             >
-              {submitting ? "Booking…" : "Confirm booking"}
+              {paymentsEnabled
+                ? submitting
+                  ? "Opening payment…"
+                  : "Continue to payment"
+                : submitting
+                ? "Booking…"
+                : "Confirm booking"}
             </button>
             <button
               onClick={() => setStep("details")}
@@ -1172,60 +1228,20 @@ export default function BookingCalendar() {
               </button>
             )}
           </div>
-          <p style={{ fontSize: "0.8rem", color: "#888" }}>
-            Payment isn&apos;t wired up yet — confirming books the sessions without charging.
+          <p className="muted small">
+            {paymentsEnabled
+              ? `You'll pay by card on Stripe's secure page. Your times are held for ${CONFIG.CHECKOUT_HOLD_MINUTES} minutes while you pay, and you're booked once payment goes through.`
+              : "Payments are off, so confirming books the sessions without charging."}
           </p>
         </div>
       )}
 
       {step === "done" && bookingResult && (
-        <div className="card booking-done">
-          <div className="booking-done-check" aria-hidden>
-            ✓
-          </div>
-          <h2>You&apos;re booked!</h2>
-          <p className="booking-done-sub">
-            {bookingResult.sessions.length} {bookingResult.subjectName} session
-            {bookingResult.sessions.length === 1 ? "" : "s"} confirmed. A confirmation email is on its way to{" "}
-            <strong>{email}</strong>.
-          </p>
-          {bookingResult.sessions.map((s) => (
-            <div key={s.id} className="list-row">
-              <span>
-                {s.tutorName} · {fmtLongDate(localDate(s.startAt, timeZone))} · {fmtTime(s.startAt, timeZone)}–
-                {fmtTime(s.endAt, timeZone)} ·{" "}
-                {s.durationMin} min · {s.mode === "online" ? "Online" : "In-person"}
-                <span className="session-place small">
-                  {s.place.label}:{" "}
-                  {s.place.href ? (
-                    <a href={s.place.href} target="_blank" rel="noopener noreferrer">
-                      {s.place.text}
-                    </a>
-                  ) : (
-                    s.place.text
-                  )}
-                </span>
-                <span className="done-manage small">
-                  <a href={s.reschedulePath}>Reschedule</a> · <a href={s.cancelPath}>Cancel</a> · Questions? Email{" "}
-                  {s.tutorName} at <a href={`mailto:${s.tutorEmail}`}>{s.tutorEmail}</a>
-                </span>
-              </span>
-              <span>{fmtPrice(s.priceCents)}</span>
-            </div>
-          ))}
-          <div className="list-row">
-            <span>
-              <strong>Total</strong>
-            </span>
-            <span>
-              <strong>{fmtPrice(bookingResult.totalCents)}</strong>
-            </span>
-          </div>
-          <p className="muted small materials-note">
-            Have homework, notes or practice problems you&apos;d like to go over? Reply to your confirmation email
-            with them before the session. Replies go straight to your tutor.
-          </p>
-          <div className="form-row" style={{ marginTop: "1.5rem" }}>
+        <BookingConfirmation
+          result={bookingResult}
+          timeZone={timeZone}
+          email={email}
+          actions={
             <button
               onClick={() => {
                 setBookingResult(null);
@@ -1234,11 +1250,8 @@ export default function BookingCalendar() {
             >
               Book more sessions
             </button>
-            <a href="/my-bookings" className="done-my-bookings">
-              See all my bookings
-            </a>
-          </div>
-        </div>
+          }
+        />
       )}
     </div>
   );

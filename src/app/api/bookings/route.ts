@@ -3,15 +3,22 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { CONFIG } from "@/config";
 import { checkSessionFits, hasOverlap, sessionPriceCents } from "@/lib/booking";
-import { sendEmail } from "@/lib/email";
 import type { BusyRange } from "@/lib/availability";
 import { formatDateTime, isValidTimeZone } from "@/lib/timezone";
-import { appUrl, cancelPath, newManageToken, reschedulePath } from "@/lib/manageLinks";
-import { manageLinksText, meetingLinkFallbackLine } from "@/lib/sessionEmails";
-import { sessionPlace, sessionPlaceLine, tutorContactLine } from "@/lib/sessionPlace";
+import { newManageToken } from "@/lib/manageLinks";
 import { DAY_MS as ONE_DAY_MS, HOUR_MS, clientIp, rateLimit } from "@/lib/rateLimit";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { getHourlyRateCents } from "@/lib/settings";
+import { paymentsEnabled } from "@/lib/stripe";
+import {
+  checkoutExpiresAt,
+  createCheckout,
+  holdExpiresAt,
+  releaseBooking,
+  releaseStalePendingBookings,
+} from "@/lib/checkout";
+import { sendBookingConfirmationEmails } from "@/lib/bookingEmails";
+import { toBookingResult } from "@/lib/bookingResult";
 
 /**
  * POST /api/bookings — book one or more sessions for a guest student.
@@ -25,10 +32,10 @@ import { getHourlyRateCents } from "@/lib/settings";
  * a cap on sessions per booking and on a student's upcoming sessions. The
  * student must also agree to the policies.
  *
- * PAYMENT: not wired up yet. Sessions are created as `confirmed` straight
- * away. When Stripe is added, this should instead create `pending_payment`
- * sessions + a BookingHold, redirect to Stripe Checkout, and let the Stripe
- * webhook flip them to `confirmed`.
+ * PAYMENT: with Stripe on (STRIPE_SECRET_KEY set), the sessions are saved as
+ * `pending_payment` with holds on their times, and the response is a Stripe
+ * Checkout URL to send the student to; paying confirms them (see
+ * src/lib/checkout.ts). With Stripe off, they're confirmed straight away.
  */
 
 const bodySchema = z.object({
@@ -94,6 +101,11 @@ export async function POST(req: NextRequest) {
 
   // One rate for every tutor, read once; each session saves its own price.
   const hourlyRateCents = await getHourlyRateCents();
+  const takePayment = paymentsEnabled();
+  // Ties together the sessions paid for in one checkout.
+  const bookingRef = takePayment ? newManageToken() : null;
+  const startedAt = new Date();
+  if (takePayment) await releaseStalePendingBookings(startedAt);
 
   const requested = input.sessions
     .map((s) => {
@@ -230,7 +242,9 @@ export async function POST(req: NextRequest) {
               timezone: input.timeZone, // the student's, for their emails
               durationMin: a.durationMin,
               priceCents: a.priceCents,
-              status: "confirmed", // TODO(payment): pending_payment until Stripe confirms
+              // Paid bookings wait for Stripe; without payments they're booked now.
+              status: takePayment ? "pending_payment" : "confirmed",
+              bookingRef,
               policiesAcceptedAt: now,
               cancellationToken: newManageToken(),
               rescheduleToken: newManageToken(),
@@ -250,30 +264,53 @@ export async function POST(req: NextRequest) {
           });
           sessions.push({ ...session, tutorName: a.tutorName });
         }
+        if (bookingRef) {
+          // Nobody else can take these times while the student pays.
+          await tx.bookingHold.createMany({
+            data: accepted.map((a) => ({
+              tutorId: a.tutorId,
+              startAt: a.start,
+              endAt: a.end,
+              expiresAt: holdExpiresAt(startedAt),
+              bookingRef,
+            })),
+          });
+        }
         return { subjectName: subject.name, sessions, tutors };
       },
       { maxWait: 10_000, timeout: 20_000 }
     );
 
-    await sendConfirmationEmails(input, created);
+    if (bookingRef) {
+      try {
+        const checkout = await createCheckout({
+          bookingRef,
+          studentEmail: input.studentEmail,
+          subjectName: created.subjectName,
+          timeZone: input.timeZone,
+          expiresAt: checkoutExpiresAt(startedAt),
+          sessions: created.sessions,
+        });
+        return NextResponse.json({ checkoutUrl: checkout.url, checkoutId: checkout.id, bookingRef }, { status: 201 });
+      } catch (err) {
+        console.error("Starting Stripe Checkout failed:", err);
+        await releaseBooking(bookingRef);
+        return NextResponse.json({ error: "Couldn't open the payment page. Please try again." }, { status: 502 });
+      }
+    }
 
-    return NextResponse.json(
+    await sendBookingConfirmationEmails(
       {
-        subjectName: created.subjectName,
-        totalCents: created.sessions.reduce((sum, s) => sum + s.priceCents, 0),
-        sessions: created.sessions.map(({ tutorId, cancellationToken, rescheduleToken, ...s }) => {
-          const tutor = created.tutors.find((t) => t.id === tutorId)!;
-          return {
-            ...s,
-            cancelPath: cancelPath(cancellationToken),
-            reschedulePath: reschedulePath(rescheduleToken),
-            place: sessionPlace(s.mode, tutor, s.location),
-            tutorEmail: tutor.email,
-          };
-        }),
+        studentName: input.studentName,
+        studentEmail: input.studentEmail,
+        studentPhone: input.studentPhone || null,
+        description: input.description,
+        timezone: input.timeZone,
       },
-      { status: 201 }
+      created
     );
+
+    return NextResponse.json(toBookingResult(created.subjectName, created.sessions, created.tutors), { status: 201 });
   } catch (err) {
     if (err instanceof BookingConflict) {
       return NextResponse.json({ error: err.message }, { status: 409 });
@@ -281,87 +318,4 @@ export async function POST(req: NextRequest) {
     console.error("POST /api/bookings failed:", err);
     return NextResponse.json({ error: "Something went wrong saving your booking. Please try again." }, { status: 500 });
   }
-}
-
-function modeLabel(mode: "online" | "in_person"): string {
-  return mode === "online" ? "Online" : "In-person";
-}
-
-async function sendConfirmationEmails(
-  input: z.infer<typeof bodySchema>,
-  created: {
-    subjectName: string;
-    sessions: {
-      tutorId: string;
-      tutorName: string;
-      startAt: Date;
-      durationMin: number;
-      mode: "online" | "in_person";
-      location: string | null;
-      priceCents: number;
-      cancellationToken: string;
-      rescheduleToken: string;
-    }[];
-    tutors: {
-      id: string;
-      name: string;
-      email: string;
-      timeZone: string;
-      inPersonLocation: string | null;
-      meetingLink: string | null;
-    }[];
-  }
-) {
-  const tutorOf = (s: { tutorId: string }) => created.tutors.find((t) => t.id === s.tutorId)!;
-  // Each person sees times in their own timezone.
-  const line = (s: (typeof created.sessions)[number], timeZone: string) =>
-    `- ${formatDateTime(s.startAt, timeZone)} · ${s.durationMin} min · ${modeLabel(s.mode)} · ${s.tutorName} · $${(
-      s.priceCents / 100
-    ).toFixed(2)}`;
-
-  const studentText = [
-    `Hi ${input.studentName},`,
-    "",
-    `Your ${created.subjectName} tutoring session${created.sessions.length === 1 ? " is" : "s are"} booked:`,
-    "",
-    ...created.sessions.flatMap((s) => [
-      line(s, input.timeZone),
-      `    ${sessionPlaceLine(s.mode, tutorOf(s), s.location)}`,
-      ...manageLinksText(s).map((l) => `    ${l}`),
-    ]),
-    "",
-    // One contact line per tutor in this booking.
-    ...created.tutors.filter((t) => created.sessions.some((s) => s.tutorId === t.id)).map(tutorContactLine),
-    ...(created.sessions.some((s) => s.mode === "online") ? [meetingLinkFallbackLine()] : []),
-    "Have homework, notes or practice problems you'd like to go over? Reply to this email with them before the session so your tutor can take a look.",
-    "",
-    `Need to change plans? You can reschedule up to ${CONFIG.RESCHEDULE_MIN_NOTICE_HOURS} hours before, or cancel any time before the session.`,
-    `See all your bookings any time at ${appUrl()}/my-bookings`,
-    "",
-    "See you then!",
-    CONFIG.SITE_NAME,
-  ].join("\n");
-
-  // Replies go to the tutor(s), e.g. a student sending homework ahead of the session.
-  const bookedTutorEmails = created.tutors.filter((t) => created.sessions.some((s) => s.tutorId === t.id)).map((t) => t.email);
-  const emails = [sendEmail(input.studentEmail, `Booking confirmed: ${created.subjectName}`, studentText, bookedTutorEmails)];
-
-  for (const tutor of created.tutors) {
-    const theirs = created.sessions.filter((s) => s.tutorId === tutor.id);
-    if (theirs.length === 0) continue;
-    const tutorText = [
-      `Hi ${tutor.name},`,
-      "",
-      `${input.studentName} (${input.studentEmail}${input.studentPhone ? `, ${input.studentPhone}` : ""}) booked ${created.subjectName}:`,
-      "",
-      // The tutor needs to know where each in-person session is (the student chose it).
-      ...theirs.flatMap((s) => [line(s, tutor.timeZone), ...(s.mode === "in_person" ? [`    ${sessionPlaceLine(s.mode, tutor, s.location)}`] : [])]),
-      ...(input.description ? ["", "What they need help with:", input.description] : []),
-    ].join("\n");
-    emails.push(
-      sendEmail(tutor.email, `New booking: ${created.subjectName} with ${input.studentName}`, tutorText, input.studentEmail)
-    );
-  }
-
-  await Promise.all(emails);
 }

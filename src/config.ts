@@ -25,13 +25,13 @@ export const CONFIG = {
   // TODO: revisit — currently locked to same duration on reschedule.
   ALLOW_RESCHEDULE_DURATION_CHANGE: false,
 
-  // Cancellation
-  CANCEL_NOTICE_THRESHOLD_HOURS: 24,
-  CANCEL_REFUND_PCT_GT_24H: 0.5,
-  CANCEL_REFUND_PCT_LTE_24H: 0.0,
+  // Cancellation: share of the price refunded when a student cancels, any
+  // time before the session. (A tutor or admin cancelling refunds in full.)
+  CANCEL_REFUND_PCT: 0.75,
 
-  // Checkout
-  CHECKOUT_HOLD_MINUTES: 10,
+  // Checkout: how long a student has to pay on Stripe's page while their
+  // times are held. Stripe's minimum is 30.
+  CHECKOUT_HOLD_MINUTES: 30,
 
   // Calendar booking UI
   DEFAULT_CALENDAR_DAYS: 7,
