@@ -290,6 +290,8 @@ export async function POST(req: NextRequest) {
           timeZone: input.timeZone,
           expiresAt: checkoutExpiresAt(startedAt),
           sessions: created.sessions,
+          // Back to the address they're booking on, whatever NEXT_PUBLIC_APP_URL says.
+          siteUrl: req.nextUrl.origin,
         });
         return NextResponse.json({ checkoutUrl: checkout.url, checkoutId: checkout.id, bookingRef }, { status: 201 });
       } catch (err) {

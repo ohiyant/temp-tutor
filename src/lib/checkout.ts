@@ -17,7 +17,6 @@ import type Stripe from "stripe";
 import { CONFIG } from "@/config";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
-import { appUrl } from "@/lib/manageLinks";
 import { formatDateTime } from "@/lib/timezone";
 import { sendBookingConfirmationEmails } from "@/lib/bookingEmails";
 
@@ -45,6 +44,11 @@ export async function createCheckout(args: {
   timeZone: string;
   expiresAt: Date;
   sessions: { tutorName: string; startAt: Date; durationMin: number; priceCents: number }[];
+  /**
+   * The site address the student is booking on (e.g. https://ucrtutoring.com).
+   * Stripe sends them back there, so returning never depends on configuration.
+   */
+  siteUrl: string;
 }): Promise<{ id: string; url: string }> {
   const checkout = await stripe().checkout.sessions.create(
     {
@@ -69,8 +73,8 @@ export async function createCheckout(args: {
         },
       })),
       expires_at: Math.floor(args.expiresAt.getTime() / 1000),
-      success_url: `${appUrl()}/book/confirmed?checkout={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl()}/book?checkout=cancelled&ref=${encodeURIComponent(args.bookingRef)}`,
+      success_url: `${args.siteUrl}/book/confirmed?checkout={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${args.siteUrl}/book?checkout=cancelled&ref=${encodeURIComponent(args.bookingRef)}`,
     },
     // A retried request can't open a second checkout for the same booking.
     { idempotencyKey: `checkout-${args.bookingRef}` }
