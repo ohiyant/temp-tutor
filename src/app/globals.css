@@ -1978,11 +1978,16 @@ body:has(.fit-calendar) .tab-area {
     radial-gradient(circle at var(--shine-x, 88%) var(--shine-y, 12%), rgba(37, 99, 235, 0.12), transparent 55%),
     linear-gradient(160deg, #f5f8ff 0%, #ffffff 70%);
   border: 1px solid #e3e9f7;
+  text-align: center;
+}
+
+.welcome-hero .welcome-actions {
+  justify-content: center;
 }
 
 .welcome-eyebrow {
   margin: 0 0 0.6rem;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2007,18 +2012,11 @@ body:has(.fit-calendar) .tab-area {
   margin: 0 0.04em;
 }
 
-.welcome-tagline {
-  margin: 1rem 0 1.75rem;
-  max-width: 34rem;
-  font-size: 1.1rem;
-  line-height: 1.55;
-  color: #4b5563;
-}
-
 .welcome-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+  margin-top: 1.75rem;
 }
 
 
@@ -2329,4 +2327,114 @@ main {
   border: 1px solid #bfdbfe;
   color: #1e3a8a;
   font-size: 0.88rem;
+}
+
+/* Tutor schedule: drag on empty grid space to add availability. */
+.calendar-body.adds-availability {
+  cursor: crosshair;
+  user-select: none;
+}
+
+.calendar-body.adds-availability .calendar-block.session {
+  cursor: pointer;
+}
+
+.calendar-block.availability-draft {
+  z-index: 70;
+  pointer-events: none;
+  color: #111;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 4px;
+}
+
+.calendar-hint {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+/* Tutor schedule: availability blocks you can move (drag), resize (drag an edge) or click. */
+.calendar-block.editable-block {
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.calendar-block.editable-block:active {
+  cursor: grabbing;
+}
+
+.calendar-block.editable-block.kind-extra {
+  border-left-style: dashed;
+}
+
+.calendar-block.editable-block.is-moving {
+  opacity: 0.35;
+}
+
+.calendar-block.editable-block.is-selected {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.block-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 7px;
+  cursor: ns-resize;
+  z-index: 1;
+}
+
+.block-edge.top {
+  top: -1px;
+}
+
+.block-edge.bottom {
+  bottom: -1px;
+}
+
+/* A new range that's been dragged out but not saved yet. */
+.calendar-block.editable-block.pending-draft {
+  z-index: 65;
+  border: 1px dashed rgba(0, 0, 0, 0.45);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  color: #111;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 4px;
+}
+
+/* Touch dragging on the tutor schedule: no callout or selection on long press,
+   a lifted look once a block is picked up, and edges big enough for a finger. */
+.calendar-body.adds-availability {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
+
+.calendar-block.editable-block.is-lifted {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  transform: scale(1.02);
+  z-index: 66;
+}
+
+.touch-only {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .touch-only {
+    display: inline;
+  }
+
+  .block-edge {
+    height: 14px;
+  }
+
+  .block-edge.top {
+    top: -4px;
+  }
+
+  .block-edge.bottom {
+    bottom: -4px;
+  }
 }

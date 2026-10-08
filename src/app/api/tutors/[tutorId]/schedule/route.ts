@@ -21,6 +21,11 @@ const querySchema = z.object({
  *
  * `start` is a date in the TUTOR's timezone (returned as `timeZone`); all
  * ranges are real UTC instants, for the client to lay out in that zone.
+ *
+ * `blocks` are the pieces the availability is made of, per day, so the
+ * calendar can move, resize and remove them: weekly hours ("weekly"),
+ * one-day extra hours ("extra") and one-day blocked-off times ("blocked"),
+ * as wall-clock minutes after midnight in the tutor's timezone.
  */
 export async function GET(req: NextRequest, props: { params: Promise<{ tutorId: string }> }) {
   const params = await props.params;
@@ -70,9 +75,22 @@ export async function GET(req: NextRequest, props: { params: Promise<{ tutorId: 
     timeZone: tz,
   });
 
+  const blocks = Array.from({ length: days }, (_, i) => addDays(start, i)).flatMap((date) => {
+    const weekday = new Date(`${date}T00:00:00.000Z`).getUTCDay();
+    return [
+      ...tutor.availabilityBlocks
+        .filter((b) => b.dayOfWeek === weekday)
+        .map((b) => ({ kind: "weekly" as const, id: b.id, date, ...wallMinutes(b) })),
+      ...tutor.availabilityExceptions
+        .filter((e) => e.date.toISOString().slice(0, 10) === date)
+        .map((e) => ({ kind: e.isAvailable ? ("extra" as const) : ("blocked" as const), id: e.id, date, ...wallMinutes(e) })),
+    ];
+  });
+
   return NextResponse.json({
     start,
     timeZone: tz,
+    blocks,
     available: available.flatMap((d) => d.ranges).map((r) => ({ start: r.start.toISOString(), end: r.end.toISOString() })),
     blocked: tutor.availabilityExceptions
       .filter((e) => !e.isAvailable)
@@ -99,4 +117,9 @@ export async function GET(req: NextRequest, props: { params: Promise<{ tutorId: 
       description: s.description,
     })),
   });
+}
+
+/** "15:00"–"23:59" -> { startMin: 900, endMin: 1440 } ("23:59" is how the end of the day is stored). */
+function wallMinutes(b: { startTime: string; endTime: string }): { startMin: number; endMin: number } {
+  return { startMin: hhmmToMinutes(b.startTime), endMin: b.endTime === "23:59" ? 24 * 60 : hhmmToMinutes(b.endTime) };
 }

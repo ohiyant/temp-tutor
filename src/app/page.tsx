@@ -37,25 +37,19 @@ export default async function HomePage() {
   return (
     <div className="welcome">
       <HeroShine className="welcome-hero">
-        <p className="welcome-eyebrow">One-on-one tutoring</p>
+        <p className="welcome-eyebrow">{CONFIG.SITE_TAGLINE}</p>
         <h1 aria-label={CONFIG.SITE_NAME}>
           <SiteTitle name={CONFIG.SITE_NAME} />
         </h1>
-        <p className="welcome-tagline">{CONFIG.SITE_TAGLINE}</p>
         <div className="welcome-actions">
           {user?.tutor ? (
             <Link href={`/dashboard/${user.tutor.id}`} className="btn btn-primary btn-large">
               My schedule
             </Link>
           ) : (
-            <>
-              <Link href="/book" className="btn btn-primary btn-large">
-                Book a session
-              </Link>
-              <Link href="/my-bookings" className="btn btn-secondary btn-large">
-                My bookings
-              </Link>
-            </>
+            <Link href="/book" className="btn btn-primary btn-large">
+              Book a session
+            </Link>
           )}
         </div>
       </HeroShine>

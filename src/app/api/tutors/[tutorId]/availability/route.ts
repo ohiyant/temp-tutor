@@ -45,3 +45,24 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ tutorI
   await prisma.availabilityBlock.deleteMany({ where: { id, tutorId: params.tutorId } });
   return NextResponse.json({ ok: true });
 }
+
+/** PATCH /api/tutors/[tutorId]/availability?id=... — move or resize a weekly block (from the schedule calendar). */
+export async function PATCH(req: NextRequest, props: { params: Promise<{ tutorId: string }> }) {
+  const params = await props.params;
+  const auth = await requireTutorApi(params.tutorId);
+  if (auth instanceof NextResponse) return auth;
+
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  const parsed = createSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
+  }
+
+  const updated = await prisma.availabilityBlock.updateMany({
+    where: { id, tutorId: params.tutorId },
+    data: parsed.data,
+  });
+  if (updated.count === 0) return NextResponse.json({ error: "Those hours no longer exist." }, { status: 404 });
+  return NextResponse.json({ ok: true });
+}

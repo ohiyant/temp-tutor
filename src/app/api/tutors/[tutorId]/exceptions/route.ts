@@ -52,3 +52,39 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ tutorI
   await prisma.availabilityException.deleteMany({ where: { id, tutorId: params.tutorId } });
   return NextResponse.json({ ok: true });
 }
+
+const moveSchema = z
+  .object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format"),
+    startTime: z.string().regex(timeRegex, "Use HH:mm format"),
+    endTime: z.string().regex(timeRegex, "Use HH:mm format"),
+  })
+  .refine((data) => data.startTime < data.endTime, {
+    message: "Start time must be before end time",
+    path: ["endTime"],
+  });
+
+/** PATCH /api/tutors/[tutorId]/exceptions?id=... — move or resize a one-day change (from the schedule calendar). */
+export async function PATCH(req: NextRequest, props: { params: Promise<{ tutorId: string }> }) {
+  const params = await props.params;
+  const auth = await requireTutorApi(params.tutorId);
+  if (auth instanceof NextResponse) return auth;
+
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  const parsed = moveSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
+  }
+
+  const updated = await prisma.availabilityException.updateMany({
+    where: { id, tutorId: params.tutorId },
+    data: {
+      date: new Date(`${parsed.data.date}T00:00:00Z`),
+      startTime: parsed.data.startTime,
+      endTime: parsed.data.endTime,
+    },
+  });
+  if (updated.count === 0) return NextResponse.json({ error: "Those hours no longer exist." }, { status: 404 });
+  return NextResponse.json({ ok: true });
+}
