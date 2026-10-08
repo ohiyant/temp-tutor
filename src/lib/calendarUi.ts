@@ -121,7 +121,8 @@ export function daySegment(
 
 /** Hour labels down the time axis: one per hour from window start to end. */
 export function hourMarks(): { index: number; label: string }[] {
-  const labelFmt = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", timeZone: "UTC" });
+  // Hours only ("10 AM"): every mark is on the hour, and "10:00 AM" doesn't fit the narrow axis on phones.
+  const labelFmt = new Intl.DateTimeFormat(undefined, { hour: "numeric", timeZone: "UTC" });
   const last = WINDOW_LENGTH_MIN / 60;
   return Array.from({ length: last + 1 }, (_, index) => {
     const minute = WINDOW_START_MIN + index * 60;

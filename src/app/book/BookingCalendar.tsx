@@ -227,6 +227,8 @@ export default function BookingCalendar({
   const [error, setError] = useState<string | null>(null);
   /** A one-off message above the calendar, e.g. after backing out of payment. */
   const [notice, setNotice] = useState<string | null>(null);
+  /** Phones: show the less-used filters and the legend (hidden so the calendar fits the screen). */
+  const [moreOptions, setMoreOptions] = useState(false);
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [subjectId, setSubjectId] = useState<string>("");
@@ -680,7 +682,7 @@ export default function BookingCalendar({
   ];
 
   return (
-    <div className={`container-wide ${step === "calendar" ? "calendar-mode" : ""}`}>
+    <div className={`container-wide ${step === "calendar" ? "calendar-mode" : ""}${moreOptions ? " show-more" : ""}`}>
       <h1>Book Sessions</h1>
       {error && <p className="error-text">{error}</p>}
       {notice && step === "calendar" && <p className="booking-notice">{notice}</p>}
@@ -729,7 +731,7 @@ export default function BookingCalendar({
                 ))}
               </select>
             </div>
-            <div className="form-field" hidden={view === "weeks"}>
+            <div className="form-field more-option" hidden={view === "weeks"}>
               <label>Days shown</label>
               <input
                 type="number"
@@ -742,7 +744,7 @@ export default function BookingCalendar({
                 style={{ width: "4rem" }}
               />
             </div>
-            <div className="form-field">
+            <div className="form-field more-option">
               <label htmlFor="booking-tz">Timezone</label>
               <TimeZoneSelect
                 id="booking-tz"
@@ -751,6 +753,14 @@ export default function BookingCalendar({
                 onChange={setTimeZoneChoice}
               />
             </div>
+            <button
+              type="button"
+              className="more-options-toggle"
+              aria-expanded={moreOptions}
+              onClick={() => setMoreOptions((v) => !v)}
+            >
+              {moreOptions ? "Fewer options" : "More options"}
+            </button>
           </div>
 
           <div className="calendar-nav">

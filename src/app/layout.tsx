@@ -26,6 +26,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <a href="/" className="brand">
             Home
           </a>
+          {/* Hidden on narrow screens, and on the home page, which says it big already. */}
+          <span className="header-tagline">{CONFIG.SITE_TAGLINE}</span>
           <nav>
             {user ? (
               <>

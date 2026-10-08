@@ -1226,18 +1226,6 @@ button.secondary {
     padding-right: 1rem;
   }
 
-  /* Let the booking page scroll normally instead of pinning it to the
-     screen; the calendar gets a fixed share of the screen height. */
-  body:has(.container-wide.calendar-mode) {
-    height: auto;
-    display: block;
-    overflow: visible;
-  }
-
-  .container-wide.calendar-mode .calendar-scroll {
-    flex: none;
-    height: 70vh;
-  }
 
   .filters-bar {
     padding: 0.6rem 0.8rem;
@@ -1527,17 +1515,6 @@ body:has(.fit-calendar) .tab-area {
 }
 
 @media (max-width: 640px) {
-  /* Phones: let these pages scroll, with the calendar a fixed share of the screen. */
-  body:has(.fit-calendar) {
-    height: auto;
-    display: block;
-    overflow: visible;
-  }
-
-  .fit-calendar .calendar-scroll {
-    flex: none;
-    height: 70vh;
-  }
 
   .page-tabs a {
     padding: 0.5rem 0.6rem;
@@ -2436,5 +2413,180 @@ main {
 
   .block-edge.bottom {
     bottom: -4px;
+  }
+}
+
+/* --- Calendars on phones: fit the screen, no page scrolling ---
+   The page stays pinned to the screen (as on desktop) and the calendar takes
+   the height that's left; only the hours inside it scroll. To leave it room,
+   the controls above get compact, and the less-used ones (days shown,
+   timezone, legend) sit behind "More options". */
+
+.more-options-toggle {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  /* Booking page */
+  .container-wide.calendar-mode h1 {
+    font-size: 1.25rem;
+    margin: 0.5rem 0 0.5rem;
+  }
+
+  .container-wide.calendar-mode .filters-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem 0.6rem;
+    padding: 0.55rem 0.7rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .container-wide.calendar-mode .filters-bar .form-field:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .container-wide.calendar-mode .filters-bar label {
+    font-size: 0.75rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .container-wide.calendar-mode .filters-bar select,
+  .container-wide.calendar-mode .filters-bar input {
+    width: 100%;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+  }
+
+  .container-wide.calendar-mode:not(.show-more) .more-option,
+  .container-wide.calendar-mode:not(.show-more) .calendar-legend {
+    display: none;
+  }
+
+  .more-options-toggle {
+    display: block;
+    grid-column: 1 / -1;
+    justify-self: start;
+    padding: 0.1rem 0;
+    background: none;
+    border: none;
+    color: #2563eb;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  .more-options-toggle:hover {
+    background: none;
+    text-decoration: underline;
+  }
+
+  .container-wide.calendar-mode .calendar-nav,
+  .fit-calendar .calendar-nav {
+    gap: 0.4rem;
+    margin-bottom: 0.45rem;
+  }
+
+  /* The day headers already show the dates. */
+  .container-wide.calendar-mode .range-label,
+  .fit-calendar .range-label {
+    display: none;
+  }
+
+  .container-wide.calendar-mode .calendar-scroll {
+    min-height: 0;
+  }
+
+  .container-wide.calendar-mode .selection-bar {
+    margin-top: 0.45rem;
+    font-size: 0.8rem;
+  }
+
+  .container-wide.calendar-mode .booking-notice {
+    margin-bottom: 0.45rem;
+    font-size: 0.8rem;
+  }
+
+  /* Tutor and admin schedules */
+  body:has(.fit-calendar) .tab-area {
+    gap: 0.5rem;
+  }
+
+  body:has(.fit-calendar) .tab-area-head h1 {
+    font-size: 1.25rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .fit-calendar .calendar-legend,
+  .fit-calendar .calendar-hint {
+    display: none;
+  }
+
+  /* A details panel under the calendar can't push it off the screen. */
+  .fit-calendar > .card {
+    max-height: 45dvh;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  /* The subject picker makes the booking page obvious; give the calendar the room. */
+  .container-wide.calendar-mode h1 {
+    display: none;
+  }
+
+  .container-wide.calendar-mode .filters-bar {
+    margin-top: 0.6rem;
+  }
+
+  /* Arrows and Days/Weeks share one row. */
+  .container-wide.calendar-mode .calendar-nav,
+  .fit-calendar .calendar-nav {
+    flex-wrap: wrap;
+  }
+
+  .container-wide.calendar-mode .calendar-nav-group .nav-btn,
+  .fit-calendar .calendar-nav-group .nav-btn {
+    min-width: 1.9rem;
+    padding: 0.25rem 0.45rem;
+    font-size: 1rem;
+  }
+
+  .container-wide.calendar-mode .calendar-nav-group .nav-today,
+  .fit-calendar .calendar-nav-group .nav-today {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .container-wide.calendar-mode .view-switch .view-btn,
+  .fit-calendar .view-switch .view-btn {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .container-wide.calendar-mode .calendar-status {
+    font-size: 0.78rem;
+  }
+}
+
+/* "Get tutored by TJHSST alumni" in the middle of the header, when there's room. */
+.header-tagline {
+  flex: 1;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #2563eb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 1rem;
+}
+
+body:has(.welcome) .header-tagline {
+  visibility: hidden;
+}
+
+@media (max-width: 720px) {
+  .header-tagline {
+    display: none;
   }
 }
